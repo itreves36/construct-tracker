@@ -9,7 +9,7 @@ readme = "README.md"
 license = "Apache"
 keywords = ["lexicon", "concept", "classification", "NLP", "embeddings", "similarity", "zero shot", "construct", "category", "social sciences", "text"]
 packages = [
-  {include = "src/construct_tracker"}
+  { include = "construct_tracker", from = "src" }
 ]
 
 [tool.poetry.dependencies]
