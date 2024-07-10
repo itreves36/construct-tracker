@@ -30,6 +30,18 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry tox
 
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Install package
+      run: |
+        pip install dist/*.whl
+
+    - name: Verify package installation
+      run: |
+        python -c 'import construct_tracker; print("Package imported successfully")'
+
     - name: Run tox
       run: tox
 
