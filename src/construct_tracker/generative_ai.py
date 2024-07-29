@@ -1,4 +1,4 @@
-from litellm import completion
+ from litellm import completion
 
 
 def api_request(prompt, model="gtp-4", api_key=None):

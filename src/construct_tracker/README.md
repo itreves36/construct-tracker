@@ -26,3 +26,18 @@ For more details, see [here](https://fpgmaas.github.io/cookiecutter-poetry/relea
 ---
 
 Repository initiated with [fpgmaas/cookiecutter-poetry](https://github.com/fpgmaas/cookiecutter-poetry).
+
+
+```
+conda activate construct_poetry
+pip install poetry # create file with dependencies
+poetry config virtualenvs.in-project true
+
+poetry lock
+poetry install
+poetry config pypi-token.pypi token_here
+poetry build
+poetry publish
+poetry add spacy
+
+```

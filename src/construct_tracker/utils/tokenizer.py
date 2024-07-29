@@ -9,8 +9,6 @@ Alternatives:
 """
 
 import importlib
-
-import deplacy
 import spacy
 
 
@@ -56,6 +54,7 @@ def spacy_tokenizer(
         for doc in nlp.pipe(docs):
             # doc = en(text)
             if display_tree:
+                import deplacy
                 print(doc)
                 print(deplacy.render(doc))
 
@@ -101,6 +100,10 @@ def spacy_tokenizer(
             chunks = sorted(chunks, key=lambda x: x[0])
             chunks = [n[1] for n in chunks]
             chunks_for_all_docs.append(chunks)
+        docs_clauses_clean = []
+        for doc in chunks_for_all_docs:
+               doc_clean = [clause.replace(' ,', ', ').replace(" 's", "'s").replace('  ', ' ').strip(', ') for clause in doc]
+               docs_clauses_clean.append(doc_clean)
 
         return chunks_for_all_docs
 
