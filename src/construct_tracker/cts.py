@@ -15,7 +15,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
 from sentence_transformers import SentenceTransformer
 from construct_tracker.utils.tokenizer import spacy_tokenizer
-
+# from utils.tokenizer import spacy_tokenizer
 
 # def get_construct_embeddings_as_list(construct, lexicon_dict, construct_embeddings_d):
 #     """
@@ -124,7 +124,7 @@ def measure(
 	construct_representation="lexicon",  
 	document_representation ='clause',  
 	summary_stat=["max"],  
-	minmaxscaler=(0, 1),  
+	minmaxscaler=None,  
 	return_cosine_similarity=True,  
 	embeddings_model = 'all-MiniLM-L6-v2',  
 	document_embeddings_path = './',  
@@ -143,7 +143,7 @@ def measure(
 		construct_representation: (str) how to represent constructs. Possible values: "lexicon", "word_lexicon", "avg_lexicon", "weighted_avg_lexicon"
 		document_representation: (str) how to represent documents. Possible values: "unigram", "clause", "sentence", "document"
 		summary_stat: (list) list of summary statistics to compute. Possible values: "max", "min", "mean", "sum", "std"
-		minmaxscaler: (tuple) range to scale summary statistics. Possible values: (int, int) or None
+		minmaxscaler: (tuple or False) range to scale summary statistics. Possible values: (int, int) or None
 		return_cosine_similarity: (bool) whether to return cosine similarity. Possible values: True or False
 		embeddings_model: (str) name of sentence embeddings model. Possible values: see "Models" here: https://huggingface.co/sentence-transformers and here (click All models upper right corner of table): https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
 		document_embeddings_path: (str) path to store document embeddings. Possible values: file path
@@ -157,19 +157,20 @@ def measure(
 		tuple: A tuple containing the feature vectors for the document and the cosine scores for each construct.
 	"""
 	
-	
-	
-	
-	# Embed construct 
+	# Embed construct: construct_embeddings_d
 	# ================================================================================================
 	# Concatenate all tokens so we don't vectorize the same token multiple times
 	lexicon_tokens_concat = [item for sublist in lexicon_dict.values() for item in sublist]
 
 	if stored_embeddings_path is not None:
 		stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
-	
-	# If you need to encode new tokens:
-	tokens_to_encode = [n for n in lexicon_tokens_concat if n not in stored_embeddings.keys()]
+		# If you need to encode new tokens:
+		tokens_to_encode = [n for n in lexicon_tokens_concat if n not in stored_embeddings.keys()]
+
+	else:
+		stored_embeddings = {}
+		stored_embeddings_path = 'lexicon_embeddings.pickle'
+
 	sentence_embedding_model = SentenceTransformer(embeddings_model)       # load embedding
 	
 	print("Default input sequence length:", sentence_embedding_model.max_seq_length) 
@@ -190,9 +191,19 @@ def measure(
 		construct_embeddings_d[construct] = []
 		for token in tokens:
 			construct_embeddings_d[construct].append(stored_embeddings.get(token))
-
 	
-	# Embed documents
+	# Average embeddings for a single construct
+	constructs = lexicon_dict.keys()
+	if construct_representation == "avg_lexicon":
+		for construct in constructs:
+			construct_embeddings_list = construct_embeddings_d.get(construct)
+			construct_embeddings_avg = np.mean(construct_embeddings_list, axis=0)
+			construct_embeddings_avg = np.array(construct_embeddings_avg, dtype=float)
+			construct_embeddings_d[construct] = construct_embeddings_avg
+	# # TODO:
+	# elif construct_representation == "weighted_avg_lexicon": 
+	
+	# Embed documents: docs_embeddings_d
 	# ================================================================================================
 	# 100m 6000 long conversations with interaction
 
@@ -223,7 +234,7 @@ def measure(
 				pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 	# save final one
-	with open('./data/input/ctl/embeddings/'+f'embeddings_{embeddings_model}_docs_tokenized_with-interaction_{ts}.pickle', 'wb') as handle:
+	with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}.pickle', 'wb') as handle:
 		pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
 	
 	# TODO: erase prior ones:
@@ -231,17 +242,40 @@ def measure(
 		os.remove(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle')
 
 	
-		
-	construct_embeddings_all = {}
-	constructs = lexicon_dict.keys()
+	# Compute cosine similarity
+	# ================================================================================================
+	feature_vectors_all = []
+	cosine_scores_docs_all = {}
+
+	print(f'computing similarity between {len(constructs)} constructs and {len(docs_embeddings_d.keys())} documents...')
+
+	with concurrent.futures.ThreadPoolExecutor() as executor:
+		futures = [executor.submit(process_document, doc_id, docs_embeddings_d, construct_embeddings_d, constructs, construct_representation, summary_stat, skip_nan, doc_id_col_name) for doc_id in docs_embeddings_d.keys()]
+		for future in tqdm.tqdm(concurrent.futures.as_completed(futures)):
+			doc_result, doc_cosine_scores = future.result()
+			if doc_result is not None:
+				feature_vectors_all.append(doc_result)
+				cosine_scores_docs_all.update(doc_cosine_scores)
+
+	feature_vectors_all = pd.concat(feature_vectors_all).reset_index(drop=True) 
+
+		# Scale between 0 and 1 to follow output range of other classification models.
+	if minmaxscaler is not None:
+		scaler = MinMaxScaler()
+		feature_cols = [col for col in feature_vectors_all.columns if any(string in col for string in summary_stat)]
+		feature_vectors_all[feature_cols] = scaler.fit_transform(feature_vectors_all[feature_cols].values)
+
+	if remove_stat_name_from_col_name:
+		for stat in summary_stat:
+			feature_vectors_all.columns = [n.replace(f'_{stat}', '') for n in feature_vectors_all.columns]
+
+	if return_cosine_similarity:
+		return feature_vectors_all, cosine_scores_docs_all, docs_tokenized
+	else:
+		return feature_vectors_all
 	
-	for construct in constructs:
-		# construct_embeddings_list = get_construct_embeddings_as_list(construct, lexicon_dict, construct_embeddings_d)
-		if construct_representation == "avg_lexicon":
-			construct_embeddings_list = construct_embeddings_d.get(construct)
-			construct_embeddings_list = np.mean(construct_embeddings_list, axis=0)
-		# # TODO: 
-		# elif
+	
+		
 
 
 
@@ -249,6 +283,33 @@ def measure(
 
 
 
+
+
+
+
+"""
+documents = ['He is too competitive',
+ 'Every time I speak with my cousin Bob, I have great moments of insight, clarity, and wisdom',
+ "He meditates a lot, but he's not super smart"]
+
+tokens = [
+    ['insight', 'clarity', 'realization'],
+    ['mindfulness', 'meditation', 'buddhism'],
+    ['bad', 'mean', 'crazy'],
+    ]
+
+
+label_names = ['insight', 'mindfulness', 'bad']
+
+
+lexicon_dict = dict(zip(label_names, tokens))
+lexicon_dict
+
+feature_vectors_lc, cosine_scores_docs_lc = measure(
+    lexicon_dict ,
+    documents,
+    )
+"""
 
 
 
