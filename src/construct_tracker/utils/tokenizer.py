@@ -9,9 +9,17 @@ Alternatives:
 """
 
 import importlib
-
 import deplacy
 import spacy
+import subprocess
+
+		
+try: 
+	model = "en_core_web_sm"
+	nlp = spacy.load(model)
+except: 
+	print(f"Model {model} not found. Installing...")
+	subprocess.check_call([sys.executable, "-m", "spacy", "download", model])
 
 
 def spacy_tokenizer(
