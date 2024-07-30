@@ -14,7 +14,7 @@ import concurrent.futures
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
 from sentence_transformers import SentenceTransformer
-from utils import spacy_tokenizer
+from construct_tracker.utils.tokenizer import spacy_tokenizer
 
 
 # def get_construct_embeddings_as_list(construct, lexicon_dict, construct_embeddings_d):
