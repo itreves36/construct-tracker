@@ -62,7 +62,7 @@ def generate_prompt(
 		prompt_name = construct.replace("_", " ").lower()
 
 	if prompt == "default":
-		prompt = "Provide many single words and some short phrases related to"
+		prompt = "Provide many single words and some short phrases (all in lower case unless the word is generally in upper case) related to"
 		if domain:
 			domain = f"(in the {domain} domain). "
 			prompt = f"""{prompt} {prompt_name} {domain}{output_format}"""
@@ -77,7 +77,7 @@ def generate_prompt(
 			examples = "; ".join(examples)
 		if isinstance(examples, str):
 			# examples = '; '.join(examples)
-			prompt += f"\nHere are some examples (include these in the list): {examples}."
+			prompt += f"\nHere are some examples (include these in the list): {examples}"
 
 	return prompt
 
