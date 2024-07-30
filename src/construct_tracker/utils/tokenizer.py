@@ -9,6 +9,8 @@ Alternatives:
 """
 
 import importlib
+
+import deplacy
 import spacy
 
 
@@ -23,28 +25,20 @@ def spacy_tokenizer(
     clause_remove_conj=True,
 ):
     """
-    Tokenizes a list of documents using the SpaCy library.
+
 
     Args:
-        docs (List[str]): A list of documents to be tokenized.
-        language (str, optional): The language of the documents. Defaults to "en".
-        model (str, optional): The SpaCy model to use for tokenization. Defaults to "en_core_web_sm".
-        method (str, optional): The tokenization method to use. Can be "unigram", "clause", or "sentence". Defaults to "clause".
-        lowercase (bool, optional): Whether to convert tokens to lowercase. Defaults to False.
-        display_tree (bool, optional): Whether to display the parsed tree. Defaults to False.
-        remove_punct (bool, optional): Whether to remove punctuation from the tokens. Defaults to True.
-        clause_remove_conj (bool, optional): Whether to remove coordinating conjunctions from clause tokens. Defaults to True.
+            docs:
+            model:
+            method:
+            display_tree:
 
     Returns:
-        List[List[str]]: A list of tokenized documents. The structure of the list depends on the tokenization method used.
-            - If method is "unigram", returns a list of lists, where each inner list contains the tokens of a document.
-            - If method is "clause", returns a list of lists, where each inner list contains the clause tokens of a document.
-            - If method is "sentence", returns a list of lists, where each inner list contains the sentence tokens of a document.
-    """
 
+    """
     # TODO: split if you find ";"
     # TODO: make into list comprehensions for faster processing
-    if method == "unigram":
+    if method == "word":
         # doc = 'I am a boy'
         my_module = importlib.import_module("spacy.lang." + language)  # from spacy.lang.en import English
         if language == "en":
@@ -62,7 +56,6 @@ def spacy_tokenizer(
         for doc in nlp.pipe(docs):
             # doc = en(text)
             if display_tree:
-                import deplacy
                 print(doc)
                 print(deplacy.render(doc))
 
@@ -108,16 +101,13 @@ def spacy_tokenizer(
             chunks = sorted(chunks, key=lambda x: x[0])
             chunks = [n[1] for n in chunks]
             chunks_for_all_docs.append(chunks)
-        docs_clauses_clean = []
-        for doc in chunks_for_all_docs:
-               doc_clean = [clause.replace(' ,', ', ').replace(" 's", "'s").replace('  ', ' ').strip(', ') for clause in doc]
-               docs_clauses_clean.append(doc_clean)
 
-        return docs_clauses_clean
+        return chunks_for_all_docs
     elif method == 'sentence':
         nlp = spacy.load(model)
         docs_tokenized = [[sent.text for sent in nlp(string).sents] for string in docs]
         return docs_tokenized
+
 
 
 """
@@ -146,3 +136,7 @@ docs_long_clauses = spacy_tokenizer(docs_long,
 
 docs_long_clauses
 """
+
+
+
+   
