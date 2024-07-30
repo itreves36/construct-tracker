@@ -15,6 +15,10 @@ import importlib
 import spacy
 
 
+import importlib
+import spacy
+
+
 def spacy_tokenizer(
     docs,
     language="en",
@@ -83,7 +87,38 @@ def spacy_tokenizer(
                                 chunk.append(word.text)  # Ensure using text representation
                         chunk = " ".join(chunk)  # Join text representations
                     else:
-                        chunk = " ".join([w
+                        chunk = " ".join([ww.text for ww in words])  # Ensure using text representations
+                    chunks.append((head.i, chunk))
+
+                unseen = [ww for ww in sent if ww.text not in seen]  # Ensure using text representation for seen check
+                if remove_punct:
+                    unseen = [n for n in unseen if not n.is_punct]
+                if clause_remove_conj:
+                    chunk = []
+                    for i, word in enumerate(unseen):
+                        if not (word.tag_ == "CC" and i == len(unseen) - 1):
+                            chunk.append(word.text)  # Ensure using text representation
+                    chunk = " ".join(chunk)  # Join text representations
+                else:
+                    chunk = " ".join([ww.text for ww in unseen])  # Ensure using text representations
+                chunks.append((sent.root.i, chunk))
+
+            chunks = sorted(chunks, key=lambda x: x[0])
+            chunks = [n[1] for n in chunks]
+            chunks_for_all_docs.append(chunks)
+
+        docs_clauses_clean = [
+            [clause.replace(' ,', ', ').replace(" 's", "'s").replace('  ', ' ').strip(', ') for clause in doc]
+            for doc in chunks_for_all_docs
+        ]
+
+        return docs_clauses_clean
+
+    elif method == 'sentence':
+        nlp = spacy.load(model)
+        docs_tokenized = [[sent.text for sent in nlp(string).sents] for string in docs]
+        return docs_tokenized
+
 
 
 
