@@ -127,8 +127,10 @@ def measure(
 	minmaxscaler=None,  
 	return_cosine_similarity=True,  
 	embeddings_model = 'all-MiniLM-L6-v2',  
-	document_embeddings_path = './',  
-	save_partial_embeddings = True,  
+	document_embeddings_path = './data/embeddings/',  
+	save_lexicon_embeddings = False,
+	save_doc_embeddings = False,
+	save_partial_doc_embeddings = True,  
 	stored_embeddings_path = None,  
 	skip_nan=False,  
 	remove_stat_name_from_col_name=False,  
@@ -147,7 +149,8 @@ def measure(
 		return_cosine_similarity: (bool) whether to return cosine similarity. Possible values: True or False
 		embeddings_model: (str) name of sentence embeddings model. Possible values: see "Models" here: https://huggingface.co/sentence-transformers and here (click All models upper right corner of table): https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
 		document_embeddings_path: (str) path to store document embeddings. Possible values: file path
-		save_partial_embeddings: (bool) whether to save partial document embeddings. 
+		save_embeddings: (bool) whether to save document embeddings. 
+		save_partial_doc_embeddings: (bool) whether to save partial document embeddings. 
 		stored_embeddings_path: (str) path to pickle of stored embeddings. 
 		skip_nan: (bool) whether to skip documents with no embeddings. 
 		remove_stat_name_from_col_name: (bool) whether to remove summary stat name from column name. 
@@ -182,8 +185,9 @@ def measure(
 		embeddings_d = dict(zip(tokens_to_encode, embeddings))
 		stored_embeddings.update(embeddings_d)
 		# save pickle of embeddings
-		with open(stored_embeddings_path, 'wb') as handle:
-			dill.dump(stored_embeddings, handle, protocol=dill.HIGHEST_PROTOCOL)
+		if save_lexicon_embeddings:
+			with open(stored_embeddings_path, 'wb') as handle:
+				dill.dump(stored_embeddings, handle, protocol=dill.HIGHEST_PROTOCOL)
 
 	construct_embeddings_d = {}
 
@@ -227,19 +231,20 @@ def measure(
 	for i, list_of_clauses in enumerate(docs_tokenized):
 		docs_embeddings_d[i] = sentence_embedding_model.encode(list_of_clauses, convert_to_tensor=True,show_progress_bar=False)	
 
-		if save_partial_embeddings and i%500==0:
+		if save_doc_embeddings and save_partial_doc_embeddings and i%500==0:
 			i_str = str(i).zfill(5)
 			i_str_all.append(i_str)
 			with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle', 'wb') as handle:
 				pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 	# save final one
-	with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}.pickle', 'wb') as handle:
-		pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
+	if save_doc_embeddings:
+		with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}.pickle', 'wb') as handle:
+			pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
 	
-	# TODO: erase prior ones:
-	for i_str in i_str_all:
-		os.remove(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle')
+	if save_doc_embeddings and save_partial_doc_embeddings:
+		for i_str in i_str_all:
+			os.remove(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle')
 
 	
 	# Compute cosine similarity
