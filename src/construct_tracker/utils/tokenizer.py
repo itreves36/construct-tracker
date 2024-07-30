@@ -12,7 +12,6 @@ import importlib
 import spacy
 
 
-
 def spacy_tokenizer(
     docs,
     language="en",
@@ -24,22 +23,25 @@ def spacy_tokenizer(
     clause_remove_conj=True,
 ):
     """
-    This function tokenizes documents using spacy.
+    Tokenizes a list of documents using the SpaCy library.
 
     Args:
-        docs (list): List of documents to be tokenized.
-        language (str): Language of the documents. Defaults to 'en'.
-        model (str): Model to be used for tokenization. Defaults to 'en_core_web_sm'.
-        method (str): Method of tokenization. Possible values: {'clause', 'unigram', 'sentence'}.
-        lowercase (bool): Whether to convert tokens to lowercase. Defaults to False.
-        display_tree (bool): Whether to display the parse tree of the documents. Defaults to False.
-        remove_punct (bool): Whether to remove punctuation from tokens. Defaults to True.
-        clause_remove_conj (bool): Whether to remove coordinating conjunctions from clauses. Defaults to True.
+        docs (List[str]): A list of documents to be tokenized.
+        language (str, optional): The language of the documents. Defaults to "en".
+        model (str, optional): The SpaCy model to use for tokenization. Defaults to "en_core_web_sm".
+        method (str, optional): The tokenization method to use. Can be "unigram", "clause", or "sentence". Defaults to "clause".
+        lowercase (bool, optional): Whether to convert tokens to lowercase. Defaults to False.
+        display_tree (bool, optional): Whether to display the parsed tree. Defaults to False.
+        remove_punct (bool, optional): Whether to remove punctuation from the tokens. Defaults to True.
+        clause_remove_conj (bool, optional): Whether to remove coordinating conjunctions from clause tokens. Defaults to True.
 
     Returns:
-        list: List of tokenized documents.
+        List[List[str]]: A list of tokenized documents. The structure of the list depends on the tokenization method used.
+            - If method is "unigram", returns a list of lists, where each inner list contains the tokens of a document.
+            - If method is "clause", returns a list of lists, where each inner list contains the clause tokens of a document.
+            - If method is "sentence", returns a list of lists, where each inner list contains the sentence tokens of a document.
     """
-    
+
     # TODO: split if you find ";"
     # TODO: make into list comprehensions for faster processing
     if method == "unigram":
@@ -53,6 +55,7 @@ def spacy_tokenizer(
             tokens = [token.text.lower() for token in doc] if lowercase else [token.text.lower() for token in doc]
             tokens_for_all_docs.append(tokens)
         return tokens_for_all_docs
+
     elif method == "clause":
         nlp = spacy.load(model)
         chunks_for_all_docs = []
@@ -66,7 +69,6 @@ def spacy_tokenizer(
             seen = set()  # keep track of covered words
             chunks = []
             for sent in doc.sents:
-                # Extract independent clauses
                 heads = [cc for cc in sent.root.children if cc.dep_ == "conj"]
 
                 for head in heads:
@@ -76,30 +78,42 @@ def spacy_tokenizer(
                     for word in words:
                         seen.add(word)
                     if clause_remove_conj:
-                        chunk = [ww for ww in words if ww.tag_ != "CC" or ww != words[-1]]
+                        chunk = []
+                        for i, word in enumerate(words):
+                            len_minus_1 = len(words) - 1
+                            # print(i, word.tag_, word.text)
+                            if not (word.tag_ == "CC" and i == len_minus_1):
+                                chunk.append(word)
+                        chunk = " ".join([ww.text for ww in chunk])
                     else:
-                        chunk = [ww.text for ww in words]
-                    chunks.append(" ".join(chunk))
+                        # dont remove
+                        chunk = " ".join([ww.text for ww in words])
+                    chunks.append((head.i, chunk))
 
-                # Extract remaining words
                 unseen = [ww for ww in sent if ww not in seen]
                 if remove_punct:
                     unseen = [n for n in unseen if not n.is_punct]
                 if clause_remove_conj:
-                    chunk = [ww for ww in unseen if ww.tag_ != "CC" or ww != unseen[-1]]
+                    chunk = []
+                    for i, word in enumerate(unseen):
+                        # print(i, word.tag_, word.text)
+                        len_minus_1 = len(unseen) - 1
+                        if not (word.tag_ == "CC" and i == len_minus_1):
+                            chunk.append(word)
+                    chunk = " ".join([ww.text for ww in chunk])
                 else:
-                    chunk = [ww.text for ww in unseen]
-                chunks.append(" ".join(chunk))
+                    chunk = " ".join([ww.text for ww in unseen])
+                chunks.append((sent.root.i, chunk))
 
-                # Sort chunks by the order of appearance
-                chunks = sorted(chunks, key=lambda x: sent.start_char + x.start)
+            chunks = sorted(chunks, key=lambda x: x[0])
+            chunks = [n[1] for n in chunks]
             chunks_for_all_docs.append(chunks)
-        docs_tokenized = []
+        docs_clauses_clean = []
         for doc in chunks_for_all_docs:
-            # Clean up the tokenization
-            doc_clean = [clause.replace(' ,', ', ').replace(" 's", "'s").replace('  ', ' ').strip(', ') for clause in doc]
-            docs_tokenized.append(doc_clean)
-        return docs_tokenized
+               doc_clean = [clause.replace(' ,', ', ').replace(" 's", "'s").replace('  ', ' ').strip(', ') for clause in doc]
+               docs_clauses_clean.append(doc_clean)
+
+        return docs_clauses_clean
     elif method == 'sentence':
         nlp = spacy.load(model)
         docs_tokenized = [[sent.text for sent in nlp(string).sents] for string in docs]
