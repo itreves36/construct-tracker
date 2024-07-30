@@ -175,7 +175,10 @@ def measure(
 	# Embed construct 
 	# ================================================================================================
 	# Concatenate all tokens so we don't vectorize the same token multiple times
-	lexicon_tokens_concat = [item for sublist in lexicon_dict.values() for item in sublist]
+	lexicon_tokens_concat = []
+	for construct in lexicon_dict.keys():
+		lexicon_tokens_concat.extend(lexicon_dict[construct])
+	# lexicon_tokens_concat = [item for sublist in lexicon_dict.values() for item in sublist]
 
 	if stored_embeddings_path is not None:
 		stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
