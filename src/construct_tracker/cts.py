@@ -19,7 +19,7 @@ from construct_tracker.utils.tokenizer import spacy_tokenizer
 
 # def get_construct_embeddings_as_list(construct, lexicon_dict, construct_embeddings_d):
 #     """
-    
+	
 
 #     Args:
 #         construct (str): The construct to retrieve embeddings for.
@@ -37,22 +37,22 @@ from construct_tracker.utils.tokenizer import spacy_tokenizer
 #     if not isinstance(lexicon_tokens, list):
 #         # Raise an error if the construct is not a list of prototypes
 #         raise AssertionError("to run method lexicon_*, the construct should be a list of prototypes")
-    
+	
 #     # Initialize a list to store the embeddings for the given construct
 #     construct_embeddings_list = []
-    
+	
 #     # Iterate over the tokens in the construct
 #     for token in lexicon_tokens:
 #         # Retrieve the embedding for the current token from the dictionary
 #         token_embedding = construct_embeddings_d.get(token)
-        
+		
 #         # If the embedding is None, print a message and continue to the next token
 #         if str(token_embedding) == "None":
 #             print("(you should FIX) Could not retrieve embedding for: ", token)
 #         else:
 #             # Append the embedding to the list of embeddings for the construct
 #             construct_embeddings_list.append(token_embedding)
-    
+	
 #     # Return the list of embeddings for the given construct
 #     return construct_embeddings_list
 
@@ -157,28 +157,13 @@ def measure(
 		tuple: A tuple containing the feature vectors for the document and the cosine scores for each construct.
 	"""
 	
-	# Tokenize documents
-	if construct_representation == 'document':
-		docs_tokenized = documents.copy()
-	else:
-		
-		# TODO: add arguments as measure() arguments using kwargs.
-		docs_tokenized = spacy_tokenizer(documents, 
-										language = 'en', model='en_core_web_sm', 
-										method = document_representation,
-										lowercase=False, 
-										display_tree = False, 
-										remove_punct=False, 
-										clause_remove_conj = True)
+	
 	
 	
 	# Embed construct 
 	# ================================================================================================
 	# Concatenate all tokens so we don't vectorize the same token multiple times
-	lexicon_tokens_concat = []
-	for construct in lexicon_dict.keys():
-		lexicon_tokens_concat.extend(lexicon_dict[construct])
-	# lexicon_tokens_concat = [item for sublist in lexicon_dict.values() for item in sublist]
+	lexicon_tokens_concat = [item for sublist in lexicon_dict.values() for item in sublist]
 
 	if stored_embeddings_path is not None:
 		stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
@@ -210,6 +195,21 @@ def measure(
 	# Embed documents
 	# ================================================================================================
 	# 100m 6000 long conversations with interaction
+
+	# Tokenize documents
+	if construct_representation == 'document':
+		docs_tokenized = documents.copy()
+	else:
+		
+		# TODO: add arguments as measure() arguments using kwargs.
+		docs_tokenized = spacy_tokenizer(documents, 
+										language = 'en', model='en_core_web_sm', 
+										method = document_representation,
+										lowercase=False, 
+										display_tree = False, 
+										remove_punct=False, 
+										clause_remove_conj = True)
+
 	ts = datetime.datetime.utcnow().strftime('%y-%m-%dT%H-%M-%S')
 	docs_embeddings_d = {}
 	i_str_all = []
