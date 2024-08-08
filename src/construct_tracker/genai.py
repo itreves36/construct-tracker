@@ -2,7 +2,9 @@
 
 
 from litellm import completion
+import litellm
 
+litellm.drop_params=True # will ignore paramaters you set if they don't belong in a model
 
 def api_request(
     prompt,

@@ -1,12 +1,32 @@
-docs/source
-
 api_keys.py
 
+# Data 
+data/*
+
+*embeddings*.pickle
+
+# Exceptions
+!data/*/.gitkeep 
+!data/*/datasets_description.md 
+!data/*/*/.gitkeep  
+
+# Include lexicon_A directory and its contents
+!data/lexicons/suicide_risk_lexicon_v1-0/
+!data/lexicons/suicide_risk_lexicon_v1-0/**
+
+# Exclude everything in lexicon_A_preprocessing
+data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_preprocessing/*
+
+# Ensure the lexicon_A_preprocessing directory is tracked
+!data/lexicon_A/lexicon_A_preprocessing/.gitkeep
+
+
+docs/source
+
+.DS_Store
 DS_Store
 */drafts/*
 drafts
-.DS_Store
-data
 
 
 
@@ -189,3 +209,7 @@ cython_debug/
 concept_tracker/.DS_Store
 concept_tracker/data/.DS_Store concept_tracker/lexicon_paper/.DS_Store concept_tracker/tutorials/.DS_Store concept_tracker/utils/.DS_Store
 .ipynb_checkpoints
+my_lexicons
+*Recovery-Codes*
+*/preprocessing/*
+src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/preprocessing/*

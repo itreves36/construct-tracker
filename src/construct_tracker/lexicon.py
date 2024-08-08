@@ -1,24 +1,27 @@
 import datetime
 import json
 import re
+import os
 import sys
 import time
+import random
 import warnings
 from collections import Counter
-
 import dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import ast
 
-sys.path.append("/Users/danielmlow/Dropbox (MIT)/datum/construct-tracker/")
-from construct_tracker.genai import api_request  # local
-from construct_tracker.utils import lemmatizer  # local / construct-tracker package
-from construct_tracker.utils.word_count import word_count  # local
+# Local
+# sys.path.append("/Users/danielmlow/Dropbox (MIT)/datum/construct-tracker/")
+from .genai import api_request  # local
+from .utils import lemmatizer  # local / construct-tracker package
+from .utils.word_count import word_count  # local
+from .utils.logger_config import setup_logger
 
-# # Timeout handler function
-# def timeout_handler(signum, frame):
-# 	raise TimeoutError()
+# Set up the logger
+logger = setup_logger()
 
 
 def generate_variable_name(str):
@@ -256,12 +259,14 @@ def remove_substrings(s, substrings):
 
 
 class Lexicon:
-	def __init__(self, name=None, description=None):
+	def __init__(self, name=None, description=None, version = '1.0', creator = None):
 		"""
 		Initializes the class with optional name and description parameters.
 		"""
 		self.name = name
 		self.description = description
+		self.version = version
+		self.creator = creator
 		self.constructs = {}
 		self.construct_names = []
 		if isinstance(name, str):
@@ -280,27 +285,43 @@ class Lexicon:
 	def get_attribute(self, key, default=None):
 		return self.attributes.get(key, default)
 
-	def analyze(self, documents, normalize=True, return_matches=False):
-		"""
-		normalize: if True, divide by word count (generally a good idea, an appearance of loneliness in a short doc should weigh more than in a long doc)
-		"""
-		analysis_d = {}
+	# def analyze(self, documents, normalize=True, return_matches=False):
+	# 	"""
+	# 	normalize: if True, divide by word count (generally a good idea, an appearance of loneliness in a short doc should weigh more than in a long doc)
+	# 	"""
+	# 	analysis_d = {}
 
-		return analysis_d
+	# 	return analysis_d
 
-	def generate_definition(self, construct, domain=None, timeout=45, num_retries=2):
+	def generate_definition(self, construct, model ='command-nightly', domain=None, timeout=45, num_retries=2):
 		""" """
+		# perhaps add: 'only what is is, not how it affects other things.""
+		# OLD: f"Provide a very brief definition of {construct} (in the {domain} domain)."
+		# prompt = f"""Please provide a brief definition of {construct} (in the {domain} domain). Provide reference in APA format where you got it from. Return result in the following string format:
+			# {construct}: the_definition
+			# reference: the_reference"""
 		if domain:
-			prompt = (  # perhaps add: 'only what is is, not how it affects other things.""
-				f"Provide a very brief definition of {construct} (in the {domain} domain)."
-			)
+			prompt = f"""Please provide a brief definition of {construct} (in the {domain} domain). Provide reference in APA format where you got it from. Return result in the following string format:'''{{"{construct}": "the_definition", "reference":"the_reference"}}'''"""
+			# TODO: the formatting request might not work well for models worse than GPT-4
 		else:
-			prompt = (  # perhaps add: 'only what is is, not how it affects other things.""
-				f"Provide a very brief definition of {construct}."
+			prompt = (  
+				f"Provide a brief definition of {construct}. Provide reference in APA format where you got it from. Return result in the following format: {{'{construct}': 'the_definition', 'reference':'the_reference'}}"
 			)
-		definition = api_request(prompt, timeout=timeout, num_retries=num_retries)
+		definition = api_request(prompt, model = model, timeout=timeout, num_retries=num_retries)
+		# Convert the string to a dictionary
+		try:
+			definition = definition = eval(eval(definition))
+			reference = f"{model} which references: {definition['reference']}"
+			definition = definition[construct]
+		except ValueError as e:
+			print(f"Error parsing string: {e}. Will try by splitting")
+			reference = f"{model} which references: {definition.split('reference')[1]}"
+			definition = definition.split('"reference"')[0]
+			print(f"New definition: {definition}")
+			print(f"Reference: {reference}")
+			# defintion will remain a string
 
-		return definition
+		return definition, reference 
 
 	def clean_response(self, response, type="tokens"):
 		# print('0a', response)
@@ -331,7 +352,7 @@ class Lexicon:
 							else:
 								tokens.append(t[0].lower() + t[1:])
 					else:
-						warnings.warn(f"token is either not str or some other issue: '{t}'. Not adding to lexicon.")
+						logger.warning(f"token is either not str or some other issue: '{t}'. Not adding to lexicon.")
 				tokens = [n.strip() for n in tokens]
 				tokens_new = []
 				for token in tokens:
@@ -355,7 +376,7 @@ class Lexicon:
 				tokens = list(np.unique(tokens))  # Remove duplicates
 				return tokens
 			except:
-				warnings.warn(
+				logger.warning(
 					"Gen AI response could not be parsed. Continuing with the raw response as a single token. This is"
 					f" the response: {response}"
 				)
@@ -374,7 +395,7 @@ class Lexicon:
 		# add
 		tokens = []
 		for source in self.constructs[construct]["tokens_metadata"]:
-			if self.constructs[construct]["tokens_metadata"][source]["add_or_remove"] == "add":
+			if self.constructs[construct]["tokens_metadata"][source]["action"] in ["add", "create", "manually added"]:
 				tokens_i = self.constructs[construct]["tokens_metadata"][source]["tokens"]
 				tokens.extend(tokens_i)
 		tokens = list(np.unique(tokens))
@@ -383,7 +404,7 @@ class Lexicon:
 		# remove
 		remove = []
 		for source in self.constructs[construct]["tokens_metadata"]:
-			if self.constructs[construct]["tokens_metadata"][source]["add_or_remove"] == "remove":
+			if self.constructs[construct]["tokens_metadata"][source]["action"] == "remove":
 				tokens_i = self.constructs[construct]["tokens_metadata"][source]["tokens"]
 				remove.extend(tokens_i)
 		remove = list(np.unique(remove))
@@ -406,9 +427,14 @@ class Lexicon:
 	def add(
 		self,
 		construct,
-		section="tokens",
-		value=None,  # str, list or 'create'
-		# if value == 'create', do API request with LiteLLM
+		section = "tokens",
+		value = None,  # str, list or 'create'
+		domain = None, 
+		examples = None,
+		definition = None,
+		definition_references = None,
+		
+		# Only used if value == 'create'. if value == 'create', do API request with LiteLLM
 		prompt=None,  # str, None will create default prompt
 		source=None,  # str: model such as 'command-nightly", see litellm for models, or description "manually added by DML". Cohere 'command-nightly' models offer 5 free API calls per minute.
 		api_key=None,
@@ -417,40 +443,40 @@ class Lexicon:
 		seed=42,
 		timeout=120,
 		num_retries=2,
-		max_tokens=None,
+		max_tokens=150, # If set to None (whatever the model decides), it make take a long time and generate a lot of phrases combining the words which may be redudant. default is 150
 		remove_parentheses_definition=True,  # TODO: remove double spaces
-		verbose=True,
+		verbose=True, # True displays warnings
 	):
+		
 		# prompt_name=None,
-		# definition=None,
-		# definition_references=None,
-		# examples = None,
 		# tokens=None,
 		# tokens_metadata=None,
 		self.construct_names.append(construct)
 		self.construct_names = list(set(self.construct_names))
 
-		if construct not in self.constructs.keys():
+		
+		if construct not in self.constructs.keys() :
 			if verbose:
-				warnings.warn(
-					f"'{construct}' not in lexicon. Creating new entry for it. This warning is useful so you if you"
-					" have a typo in the construct name, you don't add a new entry by mistake."
+				logger.info(
+					f"Adding '{construct}' to the lexicon (it was not previously there). If you meant to add to an existing construct"
+					f" (and have a typo in the construct name, which is case sensitive), run: del your_lexicon_name.constructs['{construct}']"
 				)
 			self.constructs[construct] = {
 				"prompt_name": None,
 				"variable_name": generate_variable_name(
 					construct
 				),  # you can replace it later with lexicon.add(construct, section='variable_name', value=new_name)
-				"definition": None,
-				"definition_references": None,
-				"examples": None,
+				"domain": domain,
+				"examples": examples,
+				"definition": definition,
+				"definition_references": definition_references,
 				"tokens": [],
 				"tokens_lemmatized": [],
 				"remove": [],
 				"override_remove": [],
 				"tokens_metadata": {},
 			}
-		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S")  # so you don't overwrite, and save timestamp
+		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S.%f")  # so you don't overwrite, and save timestamp
 
 		if section == "tokens":
 			if isinstance(value, str):
@@ -461,7 +487,7 @@ class Lexicon:
 							construct,
 							prompt_name=self.constructs[construct]["prompt_name"],
 							prompt="default",
-							domain=None,
+							domain=self.constructs[construct]["domain"],
 							# domain=self.constructs[construct]['domain'], # need to add domain to construct dict
 							definition=self.constructs[construct]["definition"],
 							examples=self.constructs[construct]["examples"],
@@ -498,7 +524,7 @@ class Lexicon:
 						f" {ts}"
 					)
 					self.constructs[construct]["tokens_metadata"][source_info] = {
-						"add_or_remove": "add",
+						"action": "create",
 						"tokens": tokens,
 						"prompt": prompt,
 						"time_elapsed": time_elapsed,
@@ -514,7 +540,10 @@ class Lexicon:
 				tokens = value.copy()
 				source_info = f"{source} {ts}"
 				tokens = [n.strip() for n in tokens]
-				self.constructs[construct]["tokens_metadata"][source_info] = {"add_or_remove": "add", "tokens": tokens}
+				self.constructs[construct]["tokens_metadata"][source_info] = {
+					"action": "manually added", 
+					"tokens": tokens
+					}
 			else:
 				raise TypeError(
 					"value needs to be list of token/s. This operation will not add anything to lexicon. Returning"
@@ -533,7 +562,7 @@ class Lexicon:
 			remove_tokens = self.constructs[construct]["remove"]
 			try_to_add_but_removed = [n for n in tokens if n in remove_tokens]
 			if len(try_to_add_but_removed) > 0:
-				warnings.warn(
+				logger.warning(
 					f"These tokens are trying to be added to the construct '{construct}' but are listed in the 'remove'"
 					f" section of tokens_metadata: {try_to_add_but_removed}.\nThey will only be added to the"
 					" tokens_metadata not to the final tokens. You can override the previously removed tokens by"
@@ -556,14 +585,14 @@ class Lexicon:
 
 	def remove(self, construct, source=None, remove_tokens=None, remove_substrings=None):
 		# adds list of tokens to 'remove' section of 'tokens_metadata'.
-		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S")  # so you don't overwrite, and save timestamp
+		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S.%f")  # so you don't overwrite, and save timestamp
 		if isinstance(source, str):
 			source_info = f"{source} {ts}"
 		elif source is None:
 			source_info = f"{ts}"
 
 		self.constructs[construct]["tokens_metadata"][source_info] = {
-			"add_or_remove": "remove",
+			"action": "remove",
 			"tokens": remove_tokens,
 		}
 
@@ -594,9 +623,10 @@ class Lexicon:
 		self.constructs[construct]["tokens"] = tokens
 		self.constructs[construct]["tokens_removed"] = +(tokens_len - len(tokens))
 		return
+	
 
-	def to_pandas(self, add_annotation_columns=True, add_metadata_rows=True, order=None, tokens="tokens"):
-		# def to_pandas(self, add_annotation_columns=True, order=None, tokens = 'tokens'):
+	def to_pandas(self, add_ratings_columns=True, add_metadata_rows=True, order=None, tokens="tokens"):
+		# def to_pandas(self, add_ratings_columns=True, order=None, tokens = 'tokens'):
 		"""
 		TODO: still need to test
 		lexicon: dictionary with at least
@@ -610,7 +640,7 @@ class Lexicon:
 		constructs = order.copy() if isinstance(order, list) else self.constructs.keys()
 		for construct in constructs:
 			df_i = pd.DataFrame(self.constructs[construct][tokens], columns=[construct])
-			if add_annotation_columns:
+			if add_ratings_columns:
 				df_i[construct + "_include"] = [np.nan] * df_i.shape[0]
 				df_i[construct + "_add"] = [np.nan] * df_i.shape[0]
 			lexicon_df.append(df_i)
@@ -646,18 +676,30 @@ class Lexicon:
 
 		return lexicon_df
 
+	def to_dict(self):
+		lexicon_dict = {}
+		for c in self.constructs:
+			lexicon_dict[c] = self.constructs[c]["tokens"]
+		return lexicon_dict
+	
 	def save(
 		self,
-		path,
-		output_format=["pickle", "json", "json_metadata", "csv", "csv_annotation"],
+		output_dir,
+		filename = None,
+		output_format=["pickle", "json", "json_metadata", "csv", "csv_ratings"],
 		order=None,
 		timestamp=True,
 	):
+		os.makedirs(output_dir, exist_ok=True)
+		
+		if filename is None:
+			filename = self.name.replace(" ", "-")
+		path = output_dir+"/"+filename
 		if timestamp:
 			if isinstance(timestamp, str):
 				path += path + f"_{timestamp}"
 			elif timestamp is True:
-				timestamp = generate_timestamp()
+				timestamp = generate_timestamp(format="%y-%m-%dT%H-%M-%S")
 			path += f"_{timestamp}"
 
 		if "pickle" in output_format:
@@ -667,22 +709,228 @@ class Lexicon:
 		if "json_metadata" in output_format:
 			save_json(self.constructs, path, with_metadata=False, order=order)
 		if "csv" in output_format:
-			lexicon_df = self.to_pandas(add_annotation_columns=False, order=order)
+			lexicon_df = self.to_pandas(add_ratings_columns=False, order=order)
 			lexicon_df.to_csv(path + ".csv")
-		if "csv_annotation" in output_format:
-			lexicon_df = self.to_pandas(add_annotation_columns=True, order=order)
-			lexicon_df.to_csv(path + "_annotation.csv")
+		if "csv_ratings" in output_format:
+			lexicon_df = self.to_pandas(add_ratings_columns=True, order=order)
+			lexicon_df.to_csv(path + "_ratings.csv")
+
+		logger.info(f"Saved lexicon to {path}")
+
+	# TODO: do token lemmatization outside of extract in case they want to do extract multiple times on different docs using the same lexicon
+	# TODO: maybe implement this where I use regex to do the counting? https://github.com/kristopherkyle/SEANCE/blob/89213d9ab7e397a64db1fde91ef7f44494a19e35/SEANCE_1_2_0.py#L403
+	# TODO: negation
+	def extract(
+		self,
+		docs,
+		normalize=True,
+		return_zero=[],
+		return_matches=True,
+		add_word_count=True,
+		add_lemmatized_lexicon=True, # replace lexicon_tokens with lemmatized tokens
+		lemmatize_docs=False,
+		exact_match_n=4,
+		exact_match_tokens=[],
+	):
+		# TODO: return zero is for entire docs, shouldnt it be for tokens?
+		"""
+		docs (list): List of documents.
+			normalize (bool, optional): Whether to normalize the extracted features by word count. 3 matches in a short document would be weighed higher than in a long document. Defaults to True.
+			return_zero (list, optional): List of tokens to return 0 for their count (e.g., if it is often producing errors). Defaults to [].
+			return_matches (bool, optional): Whether to return matches. Defaults to True.
+			add_word_count (bool, optional): Whether to add word counts to the extracted features. Defaults to True.
+			add_lemmatized_lexicon (bool, optional): Whether to add lemmatize lexicon tokens as well as original tokens. Defaults to True.
+			lemmatize_docs (bool, optional): Whether to lemmatize documents (this would find more matches, but be less interpretable because we wouldn't know the unlemmatized token it is matching, and may capture false positives). Defaults to False.
+			exact_match_n (int, optional): (if a lexicon token is short, it would a substring of many document words, creating false positives (5 characters and more). The maximum length of exact matches. Defaults to 4.
+			exact_match_tokens (list, optional): List of exact match tokens. Defaults to [].
+		"""
+		lexicon_dict = self.constructs.copy() # keys are constructs, values are dictionaries with tokens, definitions and other metadata.
+		docs = [doc.replace("\n", " ").replace("  ", " ").replace("“", "").replace("”", "") for doc in docs]
+		if lemmatize_docs:
+			print("lemmatizing docs...")
+			docs = lemmatizer.spacy_lemmatizer(docs, language="en")  # custom function
+			docs = [" ".join(n) for n in docs]
+
+		print("extracting... ")
+		docs2 = docs.copy()
+		docs = []
+		for doc in docs2:
+			if "ness" in doc:
+				# TODO: should be optional
+				# No words really start with ness
+				# if ' ness' in doc or doc.lower().startswith('ness'):
+				# 	# eg., nec
+				# 	continue
+				# else:
+				ness_tokens = [
+					word.strip(" ,.!?*%)]|>#") for word in doc.split(" ") if word.strip(" ,.!?*%)]|>#").endswith("ness")
+				]  # ['sadness,', 'loneliness,']
+
+				tokens_adj = [word.replace("iness", "y").replace("ness", "") for word in ness_tokens]  # ['sad,', 'lonely']
+				for token_ness, token_adj in zip(ness_tokens, tokens_adj):
+					doc = doc.replace(token_ness, f"{token_ness} [{token_adj}]")
+			docs.append(doc)
 
 
-def generate_timestamp(format="%y-%m-%dT%H-%M-%S"):
+		feature_vectors = {}
+		matches = {}
+		matches_per_construct = {}
+		matches_per_doc = {}
+		for i in range(len(docs)):
+			matches_per_doc[i] = {}
+
+		for construct in tqdm(list(lexicon_dict.keys()), position=0):
+			# if lemmatize_lexicon:
+
+			# 	lexicon_tokens = lemmatizer.spacy_lemmatizer(lexicon_tokens, language='en') # custom function
+			# 	lexicon_tokens = [' '.join(n) for n in lexicon_tokens]
+
+			if add_lemmatized_lexicon:
+				# replace lexicon_tokens with lemmatized tokens
+
+				lexicon_tokens = lexicon_dict.get(construct)["tokens_lemmatized"]
+				if lexicon_tokens == []:
+					# Lemmatize
+					logger.warning(
+						"Lemmatizing the tokens. We recommend you lemmatize before extracting so you can save time if you"
+						" want to repeat extraction on different documents."
+					)
+					lexicon_tokens = lexicon_dict.get(construct)["tokens"]
+					# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in lexicon)
+
+					lexicon_tokens_lemmatized = lemmatizer.spacy_lemmatizer(
+						lexicon_tokens, language="en"
+					)  # custom function
+					lexicon_tokens_lemmatized = [" ".join(n) for n in lexicon_tokens_lemmatized]
+					lexicon_tokens += lexicon_tokens_lemmatized
+					lexicon_tokens = list(np.unique(lexicon_tokens))  # unique set
+
+					# lexicon_dict[construct]['tokens_lemmatized']=lexicon_tokens
+				# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in lexicon)
+				# 	lexicon_tokens_lemmatized = lemmatizer.spacy_lemmatizer(lexicon_tokens, language='en') # custom function
+				# 	lexicon_tokens_lemmatized = [' '.join(n) for n in lexicon_tokens_lemmatized]
+				# 	lexicon_tokens += lexicon_tokens_lemmatized
+				# 	lexicon_tokens = list(np.unique(lexicon_tokens)) # unique set
+
+			else:
+				lexicon_tokens = lexicon_dict.get(construct)["tokens"]
+
+				"""
+				lemmatizer.spacy_lemmatizer(['distressed'])
+				'distressed' > "distress", only "distress" is kept, to avoid counting twice.
+				"drained" > "drain", only "drain" is kept unless its in the except_exact_match list"
+				"die" and "died" will be kep because they are in the exact match list, because <= exact_match_n
+				"catastrophizing" > "catastrophize", both are kept
+				'forced to exist' > 'force to exist'
+				"I'm a drag"> "I am a drag", both will be kept, because one is not a substring of the other
+				"grabbed me"> "grab me", both will be kept, because one is not a substring of the other
+				"""
+			# remove tokens that contain tokens to avoid counting twice
+			# except for exact_match_n and exact matches.
+			except_exact_match = list(
+				np.unique(exact_match_tokens + [n for n in lexicon_tokens if len(n) <= exact_match_n])
+			)  # TODO: maybe "died">"die"
+			lexicon_tokens = remove_tokens_containing_token(lexicon_tokens, except_exact_match=except_exact_match)
+
+			if return_matches:
+				counts_and_matched_tokens = [
+					count_lexicons_in_doc(
+						doc,
+						tokens=lexicon_tokens,
+						return_zero=return_zero,
+						return_matches=return_matches,
+						exact_match_n=exact_match_n,
+						exact_match_tokens=exact_match_tokens,
+					)
+					for doc in docs
+				]
+				matches_per_construct[construct] = counts_and_matched_tokens
+				# for a single construct
+				for i, doc_i in enumerate(counts_and_matched_tokens):
+					# each document for that construct
+					matches_per_doc[i][construct] = doc_i
+
+				counts = [n[0] for n in counts_and_matched_tokens]
+				matched_tokens = [n[1] for n in counts_and_matched_tokens if n[1] != []]
+				matches[construct] = matched_tokens
+
+			else:
+				counts = [
+					count_lexicons_in_doc(
+						doc,
+						tokens=lexicon_tokens,
+						return_zero=return_zero,
+						return_matches=return_matches,
+						exact_match_n=exact_match_n,
+						exact_match_tokens=exact_match_tokens,
+					)
+					for doc in docs
+				]
+			# one_construct = one_construct/word_counts #normalize
+
+			feature_vectors[construct] = counts
+
+		# # feature_vector = extract_NLP_features(post, features) #removed feature_names from output
+		# if len(feature_vector) != 0:
+		#     raw_series = list(df_subreddit.iloc[pi])
+		#     subreddit_features = subreddit_features.append(pd.Series(raw_series + feature_vector, index=full_column_names), ignore_index=True)
+
+		# feature_vectors0   = pd.DataFrame(docs, columns = ['docs'])
+		# feature_vectors = pd.concat([feature_vectors0,pd.DataFrame(feature_vectors)],axis=1)
+		feature_vectors = pd.DataFrame(feature_vectors)
+
+		#     feature_vectors   = pd.DataFrame(docs)
+		#     feature_vectors['docs']=docs
+
+		if normalize:
+			wc = word_count(docs, return_zero=return_zero)
+			wc = np.array(wc)
+			feature_vectors_normalized = np.divide(feature_vectors.values.T, wc).T
+			feature_vectors = pd.DataFrame(
+				feature_vectors_normalized, index=feature_vectors.index, columns=feature_vectors.columns
+			)
+
+		if add_word_count and normalize:
+			feature_vectors["word_count"] = wc
+		elif add_word_count and not normalize:
+			wc = word_count(docs, return_zero=return_zero)
+			feature_vectors["word_count"] = wc
+
+		# feature_vectors = feature_vectors/wc
+
+		# add column with documents
+		
+		
+		
+		feature_vectors.insert(0, 'document', docs)
+		feature_vectors.insert(0, 'document_id', range(len(docs)))
+
+		if return_matches:
+			# all lexicons
+			matches_counter_d = {}
+			for lexicon_name_i in list(lexicon_dict.keys()):
+				if matches.get(lexicon_name_i):
+					x = Counter([n for i in matches.get(lexicon_name_i) for n in i])
+					matches_counter_d[lexicon_name_i] = {
+						k: v for k, v in sorted(x.items(), key=lambda item: item[1], reverse=True)
+					}
+			# Counter([n for i in matches.get(lexicon_name_i) for n in i]) for lexicon_name_i in lexicon_dict.keys()]
+
+			return feature_vectors, matches_counter_d, matches_per_doc, matches_per_construct
+		else:
+			return feature_vectors
+
+
+
+def generate_timestamp(format="%y-%m-%dT%H-%M-%S.%f"):
 	ts = datetime.datetime.utcnow().strftime(format)  # so you don't overwrite, and save timestamp
 	return ts
 
 
 def load_lexicon(path):
-	lexicon = dill.load(open(path, "rb"))
-	for c in lexicon.constructs:
-		tokens = lexicon.constructs[c]["tokens"]
+	prior_lexicon = dill.load(open(path, "rb"))
+	for c in prior_lexicon.constructs:
+		tokens = prior_lexicon.constructs[c]["tokens"]
 		tokens_str = []
 		for token in tokens:
 			if type(token) == np.str_:
@@ -690,15 +938,80 @@ def load_lexicon(path):
 				tokens_str.append(token)
 			else:
 				tokens_str.append(token)
-		lexicon.constructs[c]["tokens"] = tokens
+		prior_lexicon.constructs[c]["tokens"] = tokens
 
-	return lexicon
+	return prior_lexicon
+
+
+
+def dict_to_lexicon(lexicon_dict):
+
+	my_lexicon = Lexicon()         # Initialize lexicon
+
+	for c in lexicon_dict.keys():
+		my_lexicon.add(c, section = 'tokens', value = lexicon_dict[c])
+	return my_lexicon
+
+def load_json_to_lexicon(json_path):
+	
+	# Final tokens:
+	with open(json_path, 'r') as f:
+		data = json.load(f)
+
+	my_lexicon = Lexicon()         # Initialize lexicon
+
+	for c in data.keys():
+		for section in data[c].keys():
+			my_lexicon.add(c, section = section, value = data[c][section])
+	return my_lexicon
+
+
+	# Copy full lexicon but remove the ones that aren't
+	# ============================================================================
+	# import json
+	# import copy
+
+	# json_path = './../src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_preprocessing/suicide_risk_lexicon_validated_prototypical_tokens_24-03-06T00-47-30.json'
+	# with open(json_path, 'r') as f:
+	# 	data = json.load(f)
+
+	# srl_prototypes = copy.deepcopy(srl)         # Initialize lexicon
+
+	# for c in srl_prototypes.constructs.keys():
+	# 	prototypes_c = set(data[c]['tokens']) #==3 [0-3]
+	# 	all_validated_tokens = set(srl.constructs[c]['tokens']) # > 1.3 [0-3]
+	# 	removed = list(all_validated_tokens - prototypes_c)
+	# 	# srl_prototypes.constructs[c]['tokens'] = data[c]['tokens']
+	# 	srl_prototypes.remove(c, remove_tokens = removed, source = 'Prototypes with an average of less than 3/3 across raters' ) #redu
+
+	# If loading some info from one version, and other info from another version:
+	# ============================================================================
+	# # # Metadata:
+	# with open('./../src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_preprocessing/suicide_risk_lexicon_calibrated_matched_tokens_unvalidated_24-02-15T22-12-18.json', 'r') as f:
+	# 	metadata = json.load(f)
+
+	# srl = Lexicon()         # Initialize lexicon
+	# for c in data.keys():
+	# 	for section in data[c].keys():
+	# 		if section in ['tokens', 'tokens_lemmatized']:
+	# 			srl.add(c, section = section, value = data[c][section])
+	# 		srl.add(c, section = section, value = metadata[c][section])
+	# return srl
+
+
+	# Then you need to add other info and save. 
+	# ============================================================================
+	# srl.name = 'Suicide Risk Lexicon'		# Set lexicon name
+	# srl.description = '49 risk factors for suicidal thoughts and behaviors plus one construct about kinship, validated by clinical experts. If you use, please cite publication.'
+	# srl.creator = 'Daniel M. Low (Harvard University)' 				# your name or initials for transparency in logging who made changes
+	# srl.version = '1.0'				# Set version. Over time, others may modify your lexicon, so good to keep track. MAJOR.MINOR. (e.g., MAJOR: new constructs or big changes to a construct, Minor: small changes to a construct)
+	# srl.save('./../src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/', filename = 'suicide_risk_lexicon_validated')
 
 
 def warn_missing(dictionary, order, output_format=None):
 	missing = [n for n in dictionary if n not in order]
 	if len(missing) > 0:
-		warnings.warn(
+		logger.warning(
 			f"These constructs were NOT SAVED in {output_format} because were not in order argument: {missing}. They"
 			" are saved in the lexicon pickle file"
 		)
@@ -720,7 +1033,7 @@ def save_json(dictionary, path, with_metadata=True, order=None):
 			dictionary_wo_metadata[construct]["tokens_metadata"] = "see metadata file for tokens and sources"
 			dictionary_wo_metadata[construct][
 				"remove"
-			] = "see metadata file for tokens that were removed through human annotation/coding"
+			] = "see metadata file for tokens that were removed through human ratings/coding"
 		# for source in dictionary_wo_metadata[construct]['tokens_metadata'].keys():
 		# 	del dictionary_wo_metadata[construct]['tokens_metadata'][source]['tokens']
 
@@ -819,211 +1132,6 @@ def remove_tokens_containing_token(tokens, except_exact_match=[]):
 	return tokens
 
 
-# TODO: do token lemmatization outside of extract in case they want to do extract multiple times on different docs using the same lexicon
-
-# TODO: maybe implement this where I use regex to do the counting? https://github.com/kristopherkyle/SEANCE/blob/89213d9ab7e397a64db1fde91ef7f44494a19e35/SEANCE_1_2_0.py#L403
-# TODO: negation
-def extract(
-	docs,
-	lexicon_dict,
-	normalize=True,
-	return_zero=[],
-	return_matches=True,
-	add_word_count=True,
-	add_lemmatized_lexicon=True,
-	lemmatize_docs=False,
-	exact_match_n=4,
-	exact_match_tokens=[],
-):
-	# TODO: return zero is for entire docs, shouldnt it be for tokens?
-	"""
-
-	Args:
-									docs:
-									lexicon_dict:
-									normalize:
-																	divide by zero
-									return_zero:
-
-	Returns:
-
-	"""
-	# process all posts
-	# docs is list of list
-	# lexicon_dict is dictionary {'construct':[token1, token2, ...], 'construct2':[]}
-	docs = [doc.replace("\n", " ").replace("  ", " ").replace("“", "").replace("”", "") for doc in docs]
-	if lemmatize_docs:
-		print("lemmatizing docs...")
-		docs = lemmatizer.spacy_lemmatizer(docs, language="en")  # custom function
-		docs = [" ".join(n) for n in docs]
-
-	print("extracting... ")
-	docs2 = docs.copy()
-	docs = []
-	for doc in docs2:
-		if "ness" in doc:
-			# TODO: should be optional
-			# No words really start with ness
-			# if ' ness' in doc or doc.lower().startswith('ness'):
-			# 	# eg., nec
-			# 	continue
-			# else:
-			ness_tokens = [
-				word.strip(" ,.!?*%)]|>#") for word in doc.split(" ") if word.strip(" ,.!?*%)]|>#").endswith("ness")
-			]  # ['sadness,', 'loneliness,']
-
-			tokens_adj = [word.replace("iness", "y").replace("ness", "") for word in ness_tokens]  # ['sad,', 'lonely']
-			for token_ness, token_adj in zip(ness_tokens, tokens_adj):
-				doc = doc.replace(token_ness, f"{token_ness} [{token_adj}]")
-		docs.append(doc)
-
-	# feature_names = list(lexicon_dict.keys())
-	# full_column_names = list(df_subreddit.columns) + feature_names
-	# subreddit_features = pd.DataFrame(columns=full_column_names)
-
-	# word_counts = reddit_data.n_words.values
-	# all words in subgroup
-
-	feature_vectors = {}
-	matches = {}
-	matches_per_construct = {}
-	matches_per_doc = {}
-	for i in range(len(docs)):
-		matches_per_doc[i] = {}
-
-	for construct in tqdm(list(lexicon_dict.keys()), position=0):
-		# if lemmatize_lexicon:
-
-		# 	lexicon_tokens = lemmatizer.spacy_lemmatizer(lexicon_tokens, language='en') # custom function
-		# 	lexicon_tokens = [' '.join(n) for n in lexicon_tokens]
-
-		if add_lemmatized_lexicon:
-			# replace lexicon_tokens with lemmatized tokens
-
-			lexicon_tokens = lexicon_dict.get(construct)["tokens_lemmatized"]
-			if lexicon_tokens == []:
-				# Lemmatize
-				warnings.warn(
-					"Lemmatizing the tokens. We recommend you lemmatize before extracting so you can save time if you"
-					" want to repeat extraction on different documents."
-				)
-				lexicon_tokens = lexicon_dict.get(construct)["tokens"]
-				# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in lexicon)
-
-				lexicon_tokens_lemmatized = lemmatizer.spacy_lemmatizer(
-					lexicon_tokens, language="en"
-				)  # custom function
-				lexicon_tokens_lemmatized = [" ".join(n) for n in lexicon_tokens_lemmatized]
-				lexicon_tokens += lexicon_tokens_lemmatized
-				lexicon_tokens = list(np.unique(lexicon_tokens))  # unique set
-
-				# lexicon_dict[construct]['tokens_lemmatized']=lexicon_tokens
-			# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in lexicon)
-			# 	lexicon_tokens_lemmatized = lemmatizer.spacy_lemmatizer(lexicon_tokens, language='en') # custom function
-			# 	lexicon_tokens_lemmatized = [' '.join(n) for n in lexicon_tokens_lemmatized]
-			# 	lexicon_tokens += lexicon_tokens_lemmatized
-			# 	lexicon_tokens = list(np.unique(lexicon_tokens)) # unique set
-
-		else:
-			lexicon_tokens = lexicon_dict.get(construct)["tokens"]
-
-			"""
-			lemmatizer.spacy_lemmatizer(['distressed'])
-			'distressed' > "distress", only "distress" is kept, to avoid counting twice.
-			"drained" > "drain", only "drain" is kept unless its in the except_exact_match list"
-			"die" and "died" will be kep because they are in the exact match list, because <= exact_match_n
-			"catastrophizing" > "catastrophize", both are kept
-			'forced to exist' > 'force to exist'
-			"I'm a drag"> "I am a drag", both will be kept, because one is not a substring of the other
-			"grabbed me"> "grab me", both will be kept, because one is not a substring of the other
-			"""
-		# remove tokens that contain tokens to avoid counting twice
-		# except for exact_match_n and exact matches.
-		except_exact_match = list(
-			np.unique(exact_match_tokens + [n for n in lexicon_tokens if len(n) <= exact_match_n])
-		)  # TODO: maybe "died">"die"
-		lexicon_tokens = remove_tokens_containing_token(lexicon_tokens, except_exact_match=except_exact_match)
-
-		if return_matches:
-			counts_and_matched_tokens = [
-				count_lexicons_in_doc(
-					doc,
-					tokens=lexicon_tokens,
-					return_zero=return_zero,
-					return_matches=return_matches,
-					exact_match_n=exact_match_n,
-					exact_match_tokens=exact_match_tokens,
-				)
-				for doc in docs
-			]
-			matches_per_construct[construct] = counts_and_matched_tokens
-			# for a single construct
-			for i, doc_i in enumerate(counts_and_matched_tokens):
-				# each document for that construct
-				matches_per_doc[i][construct] = doc_i
-
-			counts = [n[0] for n in counts_and_matched_tokens]
-			matched_tokens = [n[1] for n in counts_and_matched_tokens if n[1] != []]
-			matches[construct] = matched_tokens
-
-		else:
-			counts = [
-				count_lexicons_in_doc(
-					doc,
-					tokens=lexicon_tokens,
-					return_zero=return_zero,
-					return_matches=return_matches,
-					exact_match_n=exact_match_n,
-					exact_match_tokens=exact_match_tokens,
-				)
-				for doc in docs
-			]
-		# one_construct = one_construct/word_counts #normalize
-
-		feature_vectors[construct] = counts
-
-	# # feature_vector = extract_NLP_features(post, features) #removed feature_names from output
-	# if len(feature_vector) != 0:
-	#     raw_series = list(df_subreddit.iloc[pi])
-	#     subreddit_features = subreddit_features.append(pd.Series(raw_series + feature_vector, index=full_column_names), ignore_index=True)
-
-	# feature_vectors0   = pd.DataFrame(docs, columns = ['docs'])
-	# feature_vectors = pd.concat([feature_vectors0,pd.DataFrame(feature_vectors)],axis=1)
-	feature_vectors = pd.DataFrame(feature_vectors)
-
-	#     feature_vectors   = pd.DataFrame(docs)
-	#     feature_vectors['docs']=docs
-
-	if normalize:
-		wc = word_count(docs, return_zero=return_zero)
-		wc = np.array(wc)
-		feature_vectors_normalized = np.divide(feature_vectors.values.T, wc).T
-		feature_vectors = pd.DataFrame(
-			feature_vectors_normalized, index=feature_vectors.index, columns=feature_vectors.columns
-		)
-
-	if add_word_count and normalize:
-		feature_vectors["word_count"] = wc
-	elif add_word_count and not normalize:
-		wc = word_count(docs, return_zero=return_zero)
-		feature_vectors["word_count"] = wc
-
-	# feature_vectors = feature_vectors/wc
-
-	if return_matches:
-		# all lexicons
-		matches_counter_d = {}
-		for lexicon_name_i in list(lexicon_dict.keys()):
-			if matches.get(lexicon_name_i):
-				x = Counter([n for i in matches.get(lexicon_name_i) for n in i])
-				matches_counter_d[lexicon_name_i] = {
-					k: v for k, v in sorted(x.items(), key=lambda item: item[1], reverse=True)
-				}
-		# Counter([n for i in matches.get(lexicon_name_i) for n in i]) for lexicon_name_i in lexicon_dict.keys()]
-
-		return feature_vectors, matches_counter_d, matches_per_doc, matches_per_construct
-	else:
-		return feature_vectors
 
 
 import re
@@ -1071,6 +1179,126 @@ def lemmatize_tokens(lexicon_object):
 
 		lexicon_object.constructs[c]["tokens_lemmatized"] = srl_tokens
 	return lexicon_object
+
+
+
+def add_remove_from_ratings_file(lexicon_ratings_df, my_lexicon,remove_below_or_equal_to = 0):
+	constructs = [n for n in lexicon_df.columns if "_" not in n]
+	for construct in constructs:
+		print(construct)
+		# Add
+		add_i = lexicon_df[~lexicon_df[construct + "_add"].isna()][construct + "_add"].tolist()
+		if len(add_i) > 0:
+			my_lexicon.add(construct, section="tokens", value=add_i, source=my_lexicon.creator)
+		print('added:', add_i)
+		
+		# Remove
+		remove_i = lexicon_df[lexicon_df[construct + "_include"] <= remove_below_or_equal_to][construct].tolist()
+		if len(remove_i) > 0:
+			my_lexicon.remove(
+				construct, remove_tokens=remove_i, source=my_lexicon.creator
+			)
+		print('removed:', add_i)
+		print()
+	return my_lexicon
+
+
+
+from IPython.display import HTML, display
+
+def display_highlighted_documents(highlighted_documents):
+	for doc in highlighted_documents:
+		display(HTML(doc))
+
+def highlight_matches(documents, construct, N, matches_construct2doc, shuffle = True, random_seed = 42):
+
+	"""
+	Highlight the matches of a given construct in the provided documents.
+
+	Args:
+		documents (List[str]): The list of documents to search for matches.
+		construct (str): The construct to search for matches.
+		N (int): The maximum number of matches to highlight, if available.
+		matches_construct2doc (Dict[str, List[Tuple[int, List[str]]]]]): A dictionary mapping constructs to their corresponding matches in the documents.
+
+	Returns:
+		List[str]: The list of highlighted documents.
+
+	This function takes a list of documents and a construct to search for matches in the documents. It uses the `matches_construct2doc` dictionary to retrieve the matches for the given construct. The function then iterates over the matches and highlights the matched words in the corresponding document by replacing them with HTML tags. The highlighted documents are returned as a list.
+
+	Example:
+		construct = "Compassion"
+		N = 2
+		documents = ['He is too competitive','Every time I speak with my cousin Bob, I have great moments of insight, clarity, and wisdom',"He meditates a lot, but he's not super smart"]
+		matches_construct2doc = {'Insight': [(0, []), (2, ['clarity', 'wisdom']), (0, [])],
+ 								'Mindfulness': [(0, []), (2, ['clarity', 'insight']), (1, ['meditate'])],
+ 								'Compassion': [(0, []), (0, []), (0, [])]}		
+		highlighted_docs = highlight_matches(documents, construct,N, matches_construct2doc)
+		display_highlighted_documents(highlighted_docs)
+		["This is a <mark>test</mark> document.", "Another document.", "This document contains the <mark>construct</mark>."]
+	"""
+	
+	highlighted_documents = []
+
+	
+	matches = matches_construct2doc.get(construct, [])
+	if shuffle:
+		random.seed(random_seed)
+		# joint shuffle matches and documents
+		
+		combined = list(zip(documents, matches))
+		random.shuffle(combined)
+		documents, matches = zip(*combined)
+
+	highlighted_docs_found = 0
+	for doc_index, (matches_n, words) in enumerate(matches):
+		# N = 2
+		# i= 0
+		if highlighted_docs_found >= N:
+			break
+		if (matches_n == 0 and not words):
+			continue
+		
+		document = documents[doc_index]
+		for word in words:
+			document = document.replace(word, f"<mark>{word}</mark>")
+		highlighted_documents.append(document)
+		highlighted_docs_found+=1
+	
+	display_highlighted_documents(highlighted_documents)
+	# return highlighted_documents
+
+
+def avg_above_thresh(annotations, thresh = 1.3):
+	annotations_avg = {}
+	annotations_removed = {}
+	for construct in annotations.keys():
+		annotations_avg [construct] = []
+		annotations_removed [construct] = []
+		for token in annotations[construct].keys():
+			avg_score = np.mean(annotations[construct][token])
+			# var = np.var(annotations[construct][token])
+			if 0 not in annotations[construct][token] and avg_score>=thresh:
+				annotations_avg[construct].append(token)
+			else:
+				annotations_removed[construct].append(token)
+	# remove _include from dict keys
+	annotations_avg2 = {}
+	annotations_removed2 = {}
+	
+	for construct in annotations_avg.keys():
+		annotations_avg2[construct.replace('_include','')] = annotations_avg[construct]
+		annotations_removed2[construct.replace('_include','')] = annotations_removed[construct]
+		
+
+	return annotations_avg2.copy(), annotations_removed2.copy()
+
+
+
+
+
+
+
 
 
 # Todo
