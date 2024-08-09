@@ -462,7 +462,7 @@ class Lexicon:
 					f" (and have a typo in the construct name, which is case sensitive), run: del your_lexicon_name.constructs['{construct}']"
 				)
 			self.constructs[construct] = {
-				"prompt_name": None,
+				"prompt_name": construct.replace("_", " ").lower(),
 				"variable_name": generate_variable_name(
 					construct
 				),  # you can replace it later with lexicon.add(construct, section='variable_name', value=new_name)
