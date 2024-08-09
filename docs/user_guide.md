@@ -1,9 +1,4 @@
 
-
-
-
-
-
 ```python
 feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
       lexicon_dict = lexicon_dict
@@ -25,3 +20,5 @@ feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
       minmaxscaler = (0,1)
     )
 ```
+
+

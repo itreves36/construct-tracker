@@ -1269,45 +1269,77 @@ def highlight_matches(documents, construct, N, matches_construct2doc, shuffle = 
 	# return highlighted_documents
 
 
-def avg_above_thresh(annotations, thresh = 1.3):
-	annotations_avg = {}
-	annotations_removed = {}
-	for construct in annotations.keys():
-		annotations_avg [construct] = []
-		annotations_removed [construct] = []
-		for token in annotations[construct].keys():
-			avg_score = np.mean(annotations[construct][token])
-			# var = np.var(annotations[construct][token])
-			if 0 not in annotations[construct][token] and avg_score>=thresh:
-				annotations_avg[construct].append(token)
+def avg_above_thresh(ratings, thresh = 1.3):
+	"""
+	Examples:
+	ratings = {
+		construct_1: {token_1: [rating_1, rating_2, ...], token_2: [rating_1, rating_2, ...], ...},
+		construct_2: {token_1: [rating_1, rating_2, ...], token_2: [rating_1, rating_2, ...], ...},
+		...}
+		ratings_avg, ratings_removed = avg_above_thresh(ratings, thresh = 1.3)
+		ratings_avg_prototypical, ratings_removed_prototypical = avg_above_thresh(ratings, thresh = 3)
+	"""
+	ratings_avg = {}
+	ratings_removed = {}
+	for construct in ratings.keys():
+		ratings_avg [construct] = []
+		ratings_removed [construct] = []
+		for token in ratings[construct].keys():
+			avg_score = np.mean(ratings[construct][token])
+			# var = np.var(ratings[construct][token])
+			if 0 not in ratings[construct][token] and avg_score>=thresh:
+				ratings_avg[construct].append(token)
 			else:
-				annotations_removed[construct].append(token)
+				ratings_removed[construct].append(token)
 	# remove _include from dict keys
-	annotations_avg2 = {}
-	annotations_removed2 = {}
+	ratings_avg2 = {}
+	ratings_removed2 = {}
 	
-	for construct in annotations_avg.keys():
-		annotations_avg2[construct.replace('_include','')] = annotations_avg[construct]
-		annotations_removed2[construct.replace('_include','')] = annotations_removed[construct]
+	for construct in ratings_avg.keys():
+		ratings_avg2[construct.replace('_include','')] = ratings_avg[construct]
+		ratings_removed2[construct.replace('_include','')] = ratings_removed[construct]
 		
 
-	return annotations_avg2.copy(), annotations_removed2.copy()
+	return ratings_avg2.copy(), ratings_removed2.copy()
 
 
 
 
+def merge_rating_dfs(ratings_dir, rating_files, constructs, excel_sheet_name=None):
+	all_ratings_per_construct = dict(zip(constructs, [{}]*len(constructs)))
+
+	# {construct_1: {token_1: [rating_1, rating_2, ...], token_2: [rating_1, rating_2, ...], ...},
+	# construct_2: {token_1: [rating_1, rating_2, ...], token_2: [rating_1, rating_2, ...], ...},
+	# ...}
+
+	for file in rating_files:
+		try:
+			if file.endswith(".csv"):
+				rater_i = pd.read_csv(ratings_dir+file)
+			elif file.endswith(".xlsx"):
+				if excel_sheet_name:
+					sheet_name = excel_sheet_name
+				else:
+					sheet_name = file
+				rater_i = pd.read_excel(ratings_dir+file, engine='openpyxl', sheet_name=sheet_name)
+		except:
+			print(f'failed to read {file}. Save as csv and try again.')
+		
+		all_ratings_construct_i = {}
+		# # {token_1: [rating_1, rating_2, ...], token_2: [rating_1, rating_2, ...], ...}
+		for construct in constructs:
+			all_ratings_construct_i[construct] = []
+			
+			
+			rater_i_construct_j_df = rater_i[[construct, construct+'_add']].dropna().values
+			rater_i_construct_j_dict = dict(zip(rater_i_construct_j_df[:,0],rater_i_construct_j_df[:,1]))
+
+			for token, rating in rater_i_construct_j_dict.items():
+				if token not in all_ratings_per_construct[construct].keys():
+					all_ratings_per_construct[construct][token] = []
+				if str(rating) not in ['nan','None','', 'NaN']:
+					all_ratings_per_construct[construct][token].append(float(rating))
+				
+	return all_ratings_per_construct
 
 
-
-
-
-# Todo
-"""
-add section: duplicates:
-add section: manually added: (if section=='tokens' and value != 'None', add count to manually_added
-Use code from construct_text_similarity.ipynb to save clean version of SEANCE
-clean_seance_names.csv
-inquirerbasic.txt
-add num_retries=2 to corresponding functions
-
-"""

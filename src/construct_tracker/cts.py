@@ -18,6 +18,9 @@ from construct_tracker.utils.tokenizer import spacy_tokenizer
 import numpy as np
 from IPython.display import HTML, display
 import logging
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
+
 
 # Local
 from construct_tracker import lexicon
