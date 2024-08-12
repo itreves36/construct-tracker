@@ -12,6 +12,7 @@ import importlib
 import deplacy
 import spacy
 import subprocess
+import sys
 
 		
 try: 
