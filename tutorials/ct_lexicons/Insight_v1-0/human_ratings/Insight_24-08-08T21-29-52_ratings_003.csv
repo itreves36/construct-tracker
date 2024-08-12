@@ -1,0 +1,116 @@
+,Insight,Insight_include,Insight_add,Mindfulness,Mindfulness_include,Mindfulness_add,Compassion,Compassion_include,Compassion_add
+Prompt name,,,,,,,,,
+Definition,"the clarity of understanding of one's thoughts, feelings and behavior",,,"Mindfulness is the psychological process of bringing one's attention to experiences occurring in the present moment, which can be developed through the practice of meditation and other training.",,,,,
+Reference,"Grant, A. M., Franklin, J., & Langford, P. (2002). The self-reflection and insight scale: A new measure of private self-consciousness. Social Behavior and Personality: an international journal, 30(8), 821-835.",,,gpt-4o-2024-05-13 which references: American Psychological Association. (n.d.). Mindfulness. In APA Dictionary of Psychology. Retrieved from https://dictionary.apa.org/mindfulness,,,,,
+Examples,"['clarity', 'enlightenment', 'wise']",,,"['mindful', 'meditation', 'awareness', 'nonjudgemental', 'present-focused']",,,"['compassion', 'love', 'kind', 'help others']",,
+0,acuity,,1,acceptance,,3,acceptance,,1
+1,acumen,,1,attention,,3,active listening,,2
+2,analysis,,1,attentiveness,,3,advocacy,,2
+3,analyzing,,1,attunement,,3,affection,,1
+4,apprehension,,1,awaken,,3,affective empathy,,3
+5,astuteness,,2,awareness,,2,aiding,,3
+6,awaken,meaning of life,3,awareness training,,3,altruism,,3
+7,awareness,,3,balance,,2,benevolence,,3
+8,behavioral insight,,3,body scan,,3,bonding,,3
+9,brilliance,,1,body-scan,,3,care,,3
+10,clarity,,3,breath,,2,caregiving,,3
+11,clarity of mind,,3,breathing,,2,charity,,3
+12,cognition,,1,calm,,2,comfort,,1
+13,cognitive,,1,centeredness,,2,compassion,,3
+14,cognitive clarity,,1,centering,,2,compassion fatigue,,2
+15,comprehension,,3,clarity,,2,concern,,2
+16,consciousness,,1,cognitive defusion,,2,connection,,2
+17,contemplation,,2,cognitive-flexibility,,2,considerate,,3
+18,deep understanding,,3,compassion,,3,consideration,,2
+19,depth,,1,concentration,,2,emotional intelligence,,2
+20,detection,,1,consciousness,,1,emotional resonance,,3
+21,diagnostic,,1,contemplation,,3,emotional support,,3
+22,discerned,,2,curiosity,,1,empathetic concern,,3
+23,discernment,,2,deliberate,,1,empathy,,3
+24,discovery,,3,detachment,,2,empathy training,,3
+25,elucidation,,2,dharma,,2,encouragement,,1
+26,emotional insight,,2,emotional regulation,,1,fellowship,,1
+27,enlightenment,,3,emotional-regulation,,1,forgiveness,,3
+28,epiphany,,3,empathy,,2,generosity,,3
+29,fathoming,,2,equanimity,,3,gentleness,,3
+30,foresight,,2,focus,,2,goodwill,,3
+31,grasp,,3,gentle,,1,gratitude,,2
+32,grasping,,2,gratitude,bliss,2,healing,,1
+33,illumination,,3,grounding,,2,help others,,3
+34,inner awareness,,3,harmony,,2,humanity,,1
+35,inner clarity,,3,here,,0,humility,,1
+36,inner perception,,3,here and now,,2,inclusivity,,1
+37,inner realization,,3,inner peace,,2,kind,,3
+38,inner vision,,3,inner-peace,,2,kindness,,3
+39,inner wisdom,,3,insight,,2,kindness meditation,,3
+40,insightfulness,,3,intention,,1,listening,,2
+41,intelligence,,1,intentionality,,1,love,,3
+42,interpretation,,1,introspection,,2,loving-kindness,,3
+43,introspection,,3,kindness,,2,mercy,,2
+44,intuition,,2,letting go,,3,mindfulness,,3
+45,intuitive grasp,,2,letting-go,,3,moral elevation,,1
+46,intuitive understanding,,3,loving-kindness,,3,nonjudgmental,,2
+47,intuitiveness,,2,meditate,,3,nurture,,2
+48,judgment,,1,meditation,,3,outreach,,2
+49,keenness,,1,meditative,,3,patience,,1
+50,knowing,,2,mental clarity,,1,positive regard,,1
+51,knowledge,,3,mental-health,,1,presence,,1
+52,learning,,2,metta,,2,prosocial,,3
+53,lucidity,,3,mindful,,2,prosocial behavior,,3
+54,mental clarity,,3,mindful eating,,2,psychological safety,,2
+55,mindfulness,,3,mindful walking,,2,rapport,,2
+56,observance,,1,mindful-breathing,,2,reassurance,,2
+57,observancy,,1,mindful-eating,,2,respect,,3
+58,observation,,1,mindful-walking,,2,selflessness,,3
+59,penetration,,1,mindfulness,,2,sensitivity,,1
+60,percept,,1,mindfulness-based,,2,social connectedness,,3
+61,perception,,2,moment to moment,,1,social support,,3
+62,perceptive,,2,non-attachment,,3,solace,,2
+63,perceptiveness,,2,non-reactive,,3,solidarity,,3
+64,perceptivity,,2,nonattachment,,3,support,,3
+65,perspective,,2,nonjudgemental,,3,sympathy,,3
+66,perspicacity,,2,nonreactive,,3,tenderness,,2
+67,perspicuity,,2,nonstriving,,3,tolerance,,3
+68,profound awareness,,3,noticing,,2,trust,,3
+69,profound understanding,,3,now,,0,understanding,,2
+70,profoundness,,3,observance,,1,validation,,2
+71,profundity,,2,observation,,1,vulnerability,,2
+72,prognosis,,1,observe,,1,warmth,,3
+73,prudence,,1,openness,,2,well-being,,2
+74,psychological insight,,3,patience,,1,,,
+75,realization,,3,pay attention,,2,,,
+76,recognition,,2,peace,,3,,,
+77,reflection,,2,peacefulness,,3,,,
+78,revelation,,3,perception,,1,,,
+79,sagaciousness,,2,poise,,1,,,
+80,sagacity,,2,practice,,1,,,
+81,sapience,,3,presence,,2,,,
+82,self-awareness,,3,present,,1,,,
+83,self-discovery,,3,present-focused,,3,,,
+84,self-examination,,2,psychological flexibility,,2,,,
+85,self-knowledge,,3,reflection,,2,,,
+86,self-realization,,3,relaxation,,2,,,
+87,self-reflection,,2,resilience,,2,,,
+88,self-understanding,,3,samadhi,,3,,,
+89,sharpness,,2,self-acceptance,,3,,,
+90,shrewdness,,2,self-awareness,,2,,,
+91,understanding,,1,self-care,,2,,,
+92,vision,,1,self-compassion,,3,,,
+93,wisdom,,3,self-reflection,,2,,,
+94,wise,,3,self-regulation,,2,,,
+95,,,,sensation,,2,,,
+96,,,,serenity,,2,,,
+97,,,,silence,,2,,,
+98,,,,spaciousness,,2,,,
+99,,,,stability,,1,,,
+100,,,,stillness,,2,,,
+101,,,,stress reduction,,1,,,
+102,,,,stress-reduction,,1,,,
+103,,,,surrender,,1,,,
+104,,,,tranquility,,2,,,
+105,,,,transcendence,,2,,,
+106,,,,understanding,,1,,,
+107,,,,vipassana,,3,,,
+108,,,,well-being,,1,,,
+109,,,,witnessing,,1,,,
+110,,,,zen,,3,,,

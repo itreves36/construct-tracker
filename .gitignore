@@ -28,7 +28,7 @@ DS_Store
 */drafts/*
 drafts
 
-
+./src/construct_tracker/data/datasets/
 
 
 
@@ -199,12 +199,9 @@ cython_debug/
 #.idea/
 
 .idea
-*.png
-*.csv
-*ctl*.csv
-*ctl*.pkl
-*ctl*.pickle
-*ctl*.json
+
+
+
 .DS_Store
 concept_tracker/.DS_Store
 concept_tracker/data/.DS_Store concept_tracker/lexicon_paper/.DS_Store concept_tracker/tutorials/.DS_Store concept_tracker/utils/.DS_Store

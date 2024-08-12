@@ -16,9 +16,9 @@ We want to know if these documents contain mentions of certain construct "insigh
 
 ```python
 documents = [
-	'He is too competitive',
- 	'Every time I speak with my cousin Bob, I have great moments of clarity and wisdom', # mention of insight
- 	"He meditates a lot, but he's not super smart"] # only somewhat related to insight
+ 	"Every time I speak with my cousin Bob, I have great moments of clarity and wisdom", # mention of insight
+ 	"He meditates a lot, but he's not super smart" # related to mindfulness, only somewhat related to insight
+	"He is too competitive"] #not very related
 ```
 
 Choose model [here](https://docs.litellm.ai/docs/providers) and obtain an API key from that provider. Cohere offers a free trial API key, 5 requests per minute. I'm going to choose GPT-4o:
@@ -66,10 +66,13 @@ print(matches_per_doc)
 ```
 
 
-# 2. Construct-text similarity: finding similar phrases to tokens in your lexicon
+# 2. Construct-text similarity: finding similar phrases to tokens in your lexicon -- like Ctrl+F on steroids!
 Lexicons may miss relevant words if not contained in the lexicon. Embeddings can find similar tokens. Vectorize lexicon tokens and document tokens (e.g., phrases) into embeddings. Compute similarity between both sets of tokens. Return maximum similarity. 
 
-![Construct-Text similarity](docs/images/cts.pdf)
+<!-- magick -density 300 docs/images/cts.pdf -quality 100 docs/images/cts.png -->
+<img src="docs/images/cts.png" alt="Construct-text similarity" width="500"/>
+
+<!-- ![Construct-Text similarity](docs/images/cts.pdf) -->
 
 ```python
 feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
@@ -79,6 +82,17 @@ feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
 ```
 
 
+# Structure of the lexicon object
+
+```python
+my_lexicon.constructs = {
+	'Insight': {
+		'variable_name' # a name that is not sensitive to case
+		'tokens': ['insight', 'realized', ...] # final list after all additions and removals
+		'
+	}
+}
+```
 
 ### Contributing and pull requests
 
