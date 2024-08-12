@@ -85,3 +85,25 @@ The `@daniels_branch` installs that version.
 ```
 !pip install git+https://github.com/danielmlow/construct-tracker.git@daniels_branch#egg=construct_tracker&subdirectory=dist
 ```
+
+
+## Track heavier files with git-lfs
+
+```
+brew install git-sizer
+git lfs track "src/construct_tracker/data/datasets/reddit_27_subreddits/rmhd_27subreddits_1040posts_train.csv"`
+```
+
+Check max file size:
+
+`git-sizer`
+
+This will change .gitattributes. Then add, commit, and push.
+
+If you still have the maximum file size appearing in git-sizer, then maybe you pushed it before tracking it. You can remove from history:
+```
+brew install bfg
+bfg --delete-files rmhd_27subreddits_1040posts_train.csv
+git reflog expire --expire=now --all && git gc --prune=now --aggressive
+git push origin main --force
+```
