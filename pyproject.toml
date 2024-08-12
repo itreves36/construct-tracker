@@ -40,15 +40,12 @@ sentence_transformers = "2.2.2"
 
 
 [build-system]
-requires = ["setuptools", "versioneer[toml]"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.versioneer]
 VCS = "git"
 style = "pep440"
-versionfile_source = "src/construct_tracker/_version.py"
+versionfile_source = "sr/construct_tracker/_version.py"
 tag_prefix = ""
 parentdir_prefix = "construct-tracker-"
-
-
-
