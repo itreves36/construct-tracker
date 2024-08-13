@@ -114,10 +114,9 @@ So we see that even though compassion did not find an exact match it had some re
 
 <img src="docs/images/cts_scores_sum.png" alt="Construct-text similarity" width="700"/> -->
 
-We provide many features to add/remove tokens, generate definitions, validate with human ratings, and much more (see `tutorials/construct_tracker.ipynb`)
+We provide many features to add/remove tokens, generate definitions, validate with human ratings, and much more (see `tutorials/construct_tracker.ipynb`) [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/construct_tracker.ipynb)
 
-[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/construct_tracker.ipynb)
-
+<br>
 
 # Suicide Risk Lexicon
 
@@ -142,7 +141,7 @@ features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = c
 <img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> -->
 
 
-
+<br>
 # Structure of the `lexicon.Lexicon()` object
 
 ```python
@@ -156,23 +155,33 @@ my_lexicon.version = '1.0'				# Set version. Over time, others may modify your l
 
 # Each construct is a dict. You can save a lot of metadata for each construct:
 my_lexicon.constructs = {
- 'variable_name': 'insight', # a name that is not sensitive to case with no spaces
- 'prompt_name': 'insight',
- 'domain': 'psychology', 	 # to guide Gen AI model as to sense of the construct (depression has different senses in psychology, geology, and economics)
- 'examples': ['clarity', 'enlightenment', 'wise'], # to guide Gen AI model
- 'definition': "the clarity of understanding of one's thoughts, feelings and behavior", # can be used in prompt and/or human validation
- 'definition_references': 'Grant, A. M., Franklin, J., & Langford, P. (2002). The self-reflection and insight scale: A new measure of private self-consciousness. Social Behavior and Personality: an international journal, 30(8), 821-835.',
- 'tokens': ['acknowledgment',
-  'acuity',
-  'acumen',
-  'analytical',
-  'astute',
-  'awareness',
-  'clarity',
-  ...
-  'tokens_lemmatized': [], # when counting you can lemmatize all tokens for better results
- 'remove': [], #which tokens to remove
- 'tokens_metadata': {'gpt-4o-2024-05-13, ...'} # all additions and removals by user or Gen AI with all details on generation including prompt used, etc.
+ 'Insight': {
+	'variable_name': 'insight', # a name that is not sensitive to case with no spaces
+	'prompt_name': 'insight',
+	'domain': 'psychology', 	 # to guide Gen AI model as to sense of the construct (depression has different senses in psychology, geology, and economics)
+	'examples': ['clarity', 'enlightenment', 'wise'], # to guide Gen AI model
+	'definition': "the clarity of understanding of one's thoughts, feelings and behavior", # can be used in prompt and/or human validation
+	'definition_references': 'Grant, A. M., Franklin, J., & Langford, P. (2002). The self-reflection and insight scale: A new measure of private self-consciousness. Social Behavior and Personality: an international journal, 30(8), 821-835.',
+	'tokens': ['acknowledgment',
+	'acuity',
+	'acumen',
+	'analytical',
+	'astute',
+	'awareness',
+	'clarity',
+	...],
+	'tokens_lemmatized': [], # when counting you can lemmatize all tokens for better results
+	'remove': [], #which tokens to remove
+	'tokens_metadata': {'gpt-4o-2024-05-13, temperature-0, ...': {
+								'action': 'create', 
+								'tokens': [...], 
+								'prompt': 'Provide many single words and some short phrases ...', 
+								'time_elapsed': 14.21},
+						{'gpt-4o-2024-05-13, temperature-1, ...': { ... }},
+						}		
+	}, 
+'Mindfulness': {...},
+'Compassion': {...},
 }
 ```
 
