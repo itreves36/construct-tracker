@@ -107,3 +107,7 @@ bfg --delete-files rmhd_27subreddits_1040posts_train.csv
 git reflog expire --expire=now --all && git gc --prune=now --aggressive
 git push origin main --force
 ```
+
+
+## Adding images to readme
+

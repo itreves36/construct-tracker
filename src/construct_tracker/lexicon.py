@@ -85,28 +85,6 @@ def generate_prompt(
 	return prompt
 
 
-# for var_name, definition, definition_references, clean_name, examples in definitions_df.values:
-#
-# 	with open('./data/lexicons/suicide_risk_constructs_and_definitions.txt', 'a+') as f:
-# 		f.write(f'{clean_name.capitalize()}\n')
-# 		f.write(f'- Definition: {definition}\n')
-# 		f.write(f'- Examples: {examples}\n')
-# 		f.write(f'- Sources: {definition_references}\n')
-# 		f.write(f'---------------------------------------------------------------------------\n\n')
-
-
-# Set the signal handler for timeout
-# signal.signal(signal.SIGALRM, timeout_handler)
-# try:
-#     signal.alarm(timeout)  # Start the timer
-#     responses = completion(model=model, messages=messages, api_key=api_key, temperature=temperature)
-#     response = responses.get("choices")[0].get("message").get("content")  # access response for first message
-#     return response
-# except TimeoutError:
-#     print(f"Error: The code has exceeded the time limit ({timeout} seconds) and has been stopped.")
-#     return
-
-
 def find_partial_matching_strings(list_a, list_b):
 	"""
 	Finds strings in list_a that contain any of the strings in list_b,
@@ -163,94 +141,6 @@ def count_lexicons_in_doc(doc, tokens=[], return_zero=[], return_matches=False):
 		return counter
 
 
-def analyze(docs, lexicon_token_d, normalize=True, return_zero=[], return_matches=False, add_word_count=True):
-	# TODO: return zero is for entire docs, shouldnt it be for tokens?
-	"""
-
-	Args:
-																	docs:
-																	lexicons:
-																	normalize:
-																																	divide by zero
-																	return_zero:
-
-	Returns:
-
-	"""
-	# process all posts
-	# docs is list of list
-	# lexicons is dictionary {'construct':[token1, token2, ...], 'construct2':[]}
-	docs = [doc.replace("\n", " ").replace("  ", " ").replace("“", "").replace("”", "") for doc in docs]
-	feature_vectors = {}
-	matches = {}
-
-	for construct in list(lexicon_token_d.keys()):
-		lexicon_tokens = lexicon_token_d.get(construct)
-		if return_matches:
-			counts_and_matched_tokens = [
-				count_lexicons_in_doc(
-					doc, tokens=lexicon_tokens, return_zero=return_zero, return_matches=return_matches
-				)
-				for doc in docs
-			]
-			counts = [n[0] for n in counts_and_matched_tokens]
-			matched_tokens = [n[1] for n in counts_and_matched_tokens if n[1] != []]
-			matches[construct] = matched_tokens
-
-		else:
-			counts = [
-				count_lexicons_in_doc(
-					doc, tokens=lexicon_tokens, return_zero=return_zero, return_matches=return_matches
-				)
-				for doc in docs
-			]
-		# one_construct = one_construct/word_counts #normalize
-
-		feature_vectors[construct] = counts
-
-		# # feature_vector = extract_NLP_features(post, features) #removed feature_names from output
-		# if len(feature_vector) != 0:
-		#      raw_series = list(df_subreddit.iloc[pi])
-		#      subreddit_features = subreddit_features.append(pd.Series(raw_series + feature_vector, index=full_column_names), ignore_index=True)
-
-	# feature_vectors0   = pd.DataFrame(docs, columns = ['docs'])
-	# feature_vectors = pd.concat([feature_vectors0,pd.DataFrame(feature_vectors)],axis=1)
-	feature_vectors = pd.DataFrame(feature_vectors)
-
-	#      feature_vectors   = pd.DataFrame(docs)
-	#      feature_vectors['docs']=docs
-
-	if normalize:
-		wc = word_count(docs, return_zero=return_zero)
-		wc = np.array(wc)
-		feature_vectors_normalized = np.divide(feature_vectors.values.T, wc).T
-		feature_vectors = pd.DataFrame(
-			feature_vectors_normalized, index=feature_vectors.index, columns=feature_vectors.columns
-		)
-
-	if add_word_count and normalize:
-		feature_vectors["word_count"] = wc
-	elif add_word_count and not normalize:
-		wc = word_count(docs, return_zero=return_zero)
-		feature_vectors["word_count"] = wc
-
-		# feature_vectors = feature_vectors/wc
-
-	if return_matches:
-		# all lexicons
-		matches_counter_d = {}
-		for name_i in list(lexicon_token_d.keys()):
-			if matches.get(name_i):
-				x = Counter([n for i in matches.get(name_i) for n in i])
-				matches_counter_d[name_i] = matches_counter_d[name_i] = {
-					k: v for k, v in sorted(x.items(), key=lambda item: item[1])
-				}
-		# Counter([n for i in matches.get(name_i) for n in i]) for name_i in lexicons_d.keys()]
-
-		return feature_vectors, matches_counter_d
-	else:
-		return feature_vectors
-
 
 def remove_substrings(s, substrings):
 	for substring in substrings:
@@ -284,14 +174,6 @@ class Lexicon:
 
 	def get_attribute(self, key, default=None):
 		return self.attributes.get(key, default)
-
-	# def analyze(self, documents, normalize=True, return_matches=False):
-	# 	"""
-	# 	normalize: if True, divide by word count (generally a good idea, an appearance of loneliness in a short doc should weigh more than in a long doc)
-	# 	"""
-	# 	analysis_d = {}
-
-	# 	return analysis_d
 
 	def generate_definition(self, construct, model ='command-nightly', domain=None, timeout=45, num_retries=2):
 		""" """
@@ -479,7 +361,7 @@ class Lexicon:
 		else:
 			for section_str, section_value in  [('domain', domain),('examples', examples), ('definition', definition), 
 			('definition_references', definition_references)]:
-				if str(section_value) is not "None": 
+				if str(section_value) != "None": 
 					self.constructs[construct][section_str] = section_value
 
 		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S.%f")  # so you don't overwrite, and save timestamp
@@ -737,6 +619,8 @@ class Lexicon:
 		lemmatize_docs=False,
 		exact_match_n=4,
 		exact_match_tokens=[],
+		save_dir = False,
+		save_as = 'json'
 	):
 		# TODO: return zero is for entire docs, shouldnt it be for tokens?
 		"""
@@ -778,12 +662,12 @@ class Lexicon:
 			docs.append(doc)
 
 
-		feature_vectors = {}
+		feature_vectors_df = {}
 		matches = {}
-		matches_per_construct = {}
-		matches_per_doc = {}
+		matches_construct2doc = {}
+		matches_doc2construct = {}
 		for i in range(len(docs)):
-			matches_per_doc[i] = {}
+			matches_doc2construct[i] = {}
 
 		for construct in tqdm(list(lexicon_dict.keys()), position=0):
 			# if lemmatize_lexicon:
@@ -850,11 +734,11 @@ class Lexicon:
 					)
 					for doc in docs
 				]
-				matches_per_construct[construct] = counts_and_matched_tokens
+				matches_construct2doc[construct] = counts_and_matched_tokens
 				# for a single construct
 				for i, doc_i in enumerate(counts_and_matched_tokens):
 					# each document for that construct
-					matches_per_doc[i][construct] = doc_i
+					matches_doc2construct[i][construct] = doc_i
 
 				counts = [n[0] for n in counts_and_matched_tokens]
 				matched_tokens = [n[1] for n in counts_and_matched_tokens if n[1] != []]
@@ -874,57 +758,80 @@ class Lexicon:
 				]
 			# one_construct = one_construct/word_counts #normalize
 
-			feature_vectors[construct] = counts
+			feature_vectors_df[construct] = counts
 
 		# # feature_vector = extract_NLP_features(post, features) #removed feature_names from output
 		# if len(feature_vector) != 0:
 		#     raw_series = list(df_subreddit.iloc[pi])
 		#     subreddit_features = subreddit_features.append(pd.Series(raw_series + feature_vector, index=full_column_names), ignore_index=True)
 
-		# feature_vectors0   = pd.DataFrame(docs, columns = ['docs'])
-		# feature_vectors = pd.concat([feature_vectors0,pd.DataFrame(feature_vectors)],axis=1)
-		feature_vectors = pd.DataFrame(feature_vectors)
+		# feature_vectors_df0   = pd.DataFrame(docs, columns = ['docs'])
+		# feature_vectors_df = pd.concat([feature_vectors_df0,pd.DataFrame(feature_vectors_df)],axis=1)
+		feature_vectors_df = pd.DataFrame(feature_vectors_df)
 
-		#     feature_vectors   = pd.DataFrame(docs)
-		#     feature_vectors['docs']=docs
+		#     feature_vectors_df   = pd.DataFrame(docs)
+		#     feature_vectors_df['docs']=docs
 
 		if normalize:
 			wc = word_count(docs, return_zero=return_zero)
 			wc = np.array(wc)
-			feature_vectors_normalized = np.divide(feature_vectors.values.T, wc).T
-			feature_vectors = pd.DataFrame(
-				feature_vectors_normalized, index=feature_vectors.index, columns=feature_vectors.columns
+			feature_vectors_df_normalized = np.divide(feature_vectors_df.values.T, wc).T
+			feature_vectors_df = pd.DataFrame(
+				feature_vectors_df_normalized, index=feature_vectors_df.index, columns=feature_vectors_df.columns
 			)
 
 		if add_word_count and normalize:
-			feature_vectors["word_count"] = wc
+			feature_vectors_df["word_count"] = wc
 		elif add_word_count and not normalize:
 			wc = word_count(docs, return_zero=return_zero)
-			feature_vectors["word_count"] = wc
+			feature_vectors_df["word_count"] = wc
 
-		# feature_vectors = feature_vectors/wc
+		# feature_vectors_df = feature_vectors_df/wc
 
 		# add column with documents
 		
 		
 		
-		feature_vectors.insert(0, 'document', docs)
-		feature_vectors.insert(0, 'document_id', range(len(docs)))
+		feature_vectors_df.insert(0, 'document', docs)
+		feature_vectors_df.insert(0, 'document_id', range(len(docs)))
+		
+		if save_dir:
+			lexicon_name_clean = generate_variable_name(
+						str(self.name) + '_v' + str(self.version))
 
 		if return_matches:
 			# all lexicons
-			matches_counter_d = {}
+			matches_by_construct = {}
 			for lexicon_name_i in list(lexicon_dict.keys()):
 				if matches.get(lexicon_name_i):
 					x = Counter([n for i in matches.get(lexicon_name_i) for n in i])
-					matches_counter_d[lexicon_name_i] = {
+					matches_by_construct[lexicon_name_i] = {
 						k: v for k, v in sorted(x.items(), key=lambda item: item[1], reverse=True)
 					}
 			# Counter([n for i in matches.get(lexicon_name_i) for n in i]) for lexicon_name_i in lexicon_dict.keys()]
+			if save_dir:
+				os.makedirs(save_dir, exist_ok=True)
+				feature_vectors_df.to_csv(save_dir+lexicon_name_clean+'_counts.csv', index=False)
+				
+				if save_as == 'pickle':
+					# more lightweight
+					pickle.dump(matches_by_construct, open(save_dir+lexicon_name_clean+'_matches_by_construct.pickle', "wb"))
+					pickle.dump(matches_doc2construct, open(save_dir+lexicon_name_clean+'_matches_doc2construct.pickle', "wb"))
+					pickle.dump(matches_construct2doc, open(save_dir+lexicon_name_clean+'_matches_construct2doc.pickle', "wb"))
+				elif save_as == 'json':
+					with open(save_dir+lexicon_name_clean+'_matches_by_construct.json', 'w') as json_file:
+						json.dump(matches_by_construct, json_file, indent=4)
+					with open(save_dir+lexicon_name_clean+'_matches_doc2construct.json', 'w') as json_file:
+						json.dump(matches_doc2construct, json_file, indent=4)
+					with open(save_dir+lexicon_name_clean+'_matches_construct2doc.json', 'w') as json_file:
+						json.dump(matches_construct2doc, json_file, indent=4)
 
-			return feature_vectors, matches_counter_d, matches_per_doc, matches_per_construct
+			return feature_vectors_df, matches_by_construct, matches_doc2construct, matches_construct2doc
 		else:
-			return feature_vectors
+			if save_dir:
+				os.makedirs(save_dir, exist_ok=True)
+				feature_vectors_df.to_csv(save_dir+self.variable_name+'_counts.csv', index=False)
+			return feature_vectors_df
 
 
 
@@ -933,7 +840,16 @@ def generate_timestamp(format="%y-%m-%dT%H-%M-%S.%f"):
 	return ts
 
 
-def load_lexicon(path):
+def load_lexicon(name = None, path = None):
+	script_dir = os.path.dirname(__file__)  # Directory of the script being run
+
+	if name == 'srl_v1-0':
+		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_24-08-02T21-27-35.159565.pickle')
+	elif name == 'srl_prototypes_v1-0':
+		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_prototypical_tokens_24-08-07T16-25-19.379659.pickle')
+	else:
+		# Assuming the user provided a path, it should be an absolute path or relative to script_dir
+		path = os.path.join(script_dir, path) if path else None
 	prior_lexicon = dill.load(open(path, "rb"))
 	for c in prior_lexicon.constructs:
 		tokens = prior_lexicon.constructs[c]["tokens"]

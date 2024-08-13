@@ -314,7 +314,7 @@ def measure(
 			# if you did not provide the counts DF, lexicon_counts will be None, and it will be generated here 
 			new_lexicon = lexicon.Lexicon()
 			for c in lexicon_dict.keys():
-				new_lexicon.add(c, section = 'tokens', value = lexicon_dict[c])
+				new_lexicon.add(c, section = 'tokens', value = lexicon_dict[c], verbose = False)
 		
 			counts, matches_by_construct, matches_doc2construct, matches_construct2doc  = new_lexicon.extract(documents,
 																								normalize = False,
