@@ -121,6 +121,8 @@ We provide many features to add/remove tokens, generate definitions, validate wi
 
 # Suicide Risk Lexicon
 
+[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/suicide_risk_lexicon.ipynb)
+
 We have created a lexicon with 49 risk factors for suicidal thoughts and behaviors validated by clinicians who are experts in suicide research. 
 ```python
 from construct_tracker import lexicon
