@@ -1,5 +1,5 @@
 # construct-tracker
-Track and measure constructs, concepts or categories in text documents. Built on top of litellm to interactive with Generative AI models. 
+Track and measure constructs, concepts or categories in text documents. Built on top of the litellm package to use most Generative AI models. 
 
 
 # Installation
@@ -12,7 +12,7 @@ pip install construct-tracker
 
 [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/construct_tracker.ipynb)
 
-# 1. Create a lexicon: keywords prototypically associated to a construct
+## 1. Create a lexicon: keywords prototypically associated to a construct
 
 We want to know if these documents contain mentions of certain construct "insight"
 
@@ -83,7 +83,7 @@ print(matches_per_doc)
 ``` -->
 <br><br>
 
-# 2. Construct-text similarity (CTS): finding similar phrases to tokens in your lexicon
+## 2. Construct-text similarity (CTS): finding similar phrases to tokens in your lexicon
 
 ### Like Ctrl+F on steroids!
 Lexicons may miss relevant words if not contained in the lexicon (it only counts exact matches). Embeddings can find semantically similar tokens. CTS will scan the document and return how similar is the most related phrase to any word in the lexicon. 
@@ -118,37 +118,66 @@ We provide many features to add/remove tokens, generate definitions, validate wi
 
 [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/construct_tracker.ipynb)
 
-# Structure of the lexicon object
 
-Each construct is a dict. You can save a lot of metadata for each construct:
+# Suicide Risk Lexicon
 
+We have created a lexicon with 49 risk factors for suicidal thoughts and behaviors validated by clinicians who are experts in suicide research. 
 ```python
-my_lexicon.constructs = {
-	'Insight': {
-		
-		'variable_name' # a name that is not sensitive to case with no spaces
-		'prompt_name': 'insight',
-		'variable_name': 'insight',
-		'domain': 'psychology',
-		'examples': ['insight', 'realized'],
-		'definition': Insigh,
- 'definition_references': None,
- 'tokens': ['acuity',
-  'acumen',
-  'aha moment',
-		'tokens': ['insight', 'realized', ...] # final list after all additions and removals
-		'
-	}
+from construct_tracker import lexicon
 
+# Load lexicon
+srl = lexicon.load_lexicon('./src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_24-08-02T21-27-35.159565.pickle')
+# Load only tokens that are highly prototypical of each construct
+srl_prototypes = lexicon.load_lexicon('./src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_prototypical_tokens_24-08-07T16-25-19.379659.pickle') 
 
-	
-}
-
-
-
+lexicon_dict = srl.to_dict()
+features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = cts.measure(
+    lexicon_dict,
+    documents_subset,
+    )
 ```
 
-### Contributing and pull requests
+<img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> -->
+
+
+
+# Structure of the `lexicon.Lexicon()` object
+
+```python
+
+# General info on Lexicon
+my_lexicon = lexicon.Lexicon()			# Initialize lexicon
+my_lexicon.name = 'Insight'		# Set lexicon name
+my_lexicon.description = 'Insight lexicon with constructs inspired by items of the Emotional Insight Scale'
+my_lexicon.creator = 'DML' 				# your name or initials for transparency in logging who made changes
+my_lexicon.version = '1.0'				# Set version. Over time, others may modify your lexicon, so good to keep track. MAJOR.MINOR. (e.g., MAJOR: new constructs or big changes to a construct, Minor: small changes to a construct)
+
+# Each construct is a dict. You can save a lot of metadata for each construct:
+my_lexicon.constructs = {
+ 'variable_name': 'insight', # a name that is not sensitive to case with no spaces
+ 'prompt_name': 'insight',
+ 'domain': 'psychology', 	 # to guide Gen AI model as to sense of the construct (depression has different senses in psychology, geology, and economics)
+ 'examples': ['clarity', 'enlightenment', 'wise'], # to guide Gen AI model
+ 'definition': "the clarity of understanding of one's thoughts, feelings and behavior", # can be used in prompt and/or human validation
+ 'definition_references': 'Grant, A. M., Franklin, J., & Langford, P. (2002). The self-reflection and insight scale: A new measure of private self-consciousness. Social Behavior and Personality: an international journal, 30(8), 821-835.',
+ 'tokens': ['acknowledgment',
+  'acuity',
+  'acumen',
+  'analytical',
+  'astute',
+  'awareness',
+  'clarity',
+  ...
+  'tokens_lemmatized': [], # when counting you can lemmatize all tokens for better results
+ 'remove': [], #which tokens to remove
+ 'tokens_metadata': {'gpt-4o-2024-05-13, ...'} # all additions and removals by user or Gen AI with all details on generation including prompt used, etc.
+}
+```
+
+# Contributing and pull requests
 
 See `docs/contributing.md`
+
+
+
 

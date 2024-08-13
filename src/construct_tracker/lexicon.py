@@ -480,7 +480,7 @@ class Lexicon:
 			for section_str, section_value in  [('domain', domain),('examples', examples), ('definition', definition), 
 			('definition_references', definition_references)]:
 				if str(section_value) is not "None": 
-					self.constructs[construct] = {section_str:section_value }
+					self.constructs[construct][section_str] = section_value
 
 		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S.%f")  # so you don't overwrite, and save timestamp
 

@@ -22,3 +22,29 @@ feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
 ```
 
 
+
+TODO: describe these attributes and methods:
+
+ 'add',
+ 'attributes',
+ 'build',
+ 'clean_response',
+ 'construct_names',
+ 'constructs',
+ 'creator',
+ 'description',
+ 'exact_match_n',
+ 'exact_match_tokens',
+ 'extract',
+ 'generate_definition',
+ 'get_attribute',
+ 'name',
+ 'remove',
+ 'remove_from_all_constructs',
+ 'remove_tokens_containing_token',
+ 'save',
+ 'set_attribute',
+ 'to_dict',
+ 'to_pandas',
+ 'version'
+
