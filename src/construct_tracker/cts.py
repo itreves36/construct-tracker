@@ -3,10 +3,17 @@
 # License: Apache 2.0
 # """
 
+
+
+import inspect
 import datetime
 import pickle
+import pickle
+import gzip
+import json
 import dill
 import os
+import torch
 import numpy as np
 import pandas as pd
 import tqdm
@@ -97,7 +104,8 @@ def process_document(doc_id, docs_embeddings_d, construct_embeddings_all, constr
 def measure(
 	lexicon_dict,
 	documents,
-	construct_representation="lexicon",  
+	documents_df = None,
+	construct_representation = "lexicon",  
 	document_representation ='clause',  
 	summary_stat=["max"],  
 	count_if_exact_match = 'sum',
@@ -106,14 +114,18 @@ def measure(
 	minmaxscaler=None,  
 	return_cosine_similarity=True,  
 	embeddings_model = 'all-MiniLM-L6-v2',  
-	document_embeddings_path = './data/embeddings/',  
-	save_lexicon_embeddings = False,
+	doc_encoding_batch_size = 2048,  
+	load_document_embeddings = None,  
+	save_lexicon_embeddings = True,
+	stored_embeddings_path = None,  
 	save_doc_embeddings = False,
 	save_partial_doc_embeddings = True,  
-	stored_embeddings_path = None,  
 	skip_nan=False,  
 	remove_stat_name_from_col_name=False,  
 	doc_id_col_name='document_id',
+	save_dir = False,
+	save_append_to_filename = None, 
+	# save_as = 'json',
 	verbose=True  
 ):	
 	"""
@@ -122,6 +134,7 @@ def measure(
 	Args:
 		lexicon_dict: (dict) mapping construct names to lists of tokens
 		documents: (list) list of strings
+		documents_df: (None or pandas dataframe) concatenate the output DF to this dataframe (should have the same amount of rows)
 		construct_representation: (str) how to represent constructs. Possible values: "lexicon", "word_lexicon", "avg_lexicon", "weighted_avg_lexicon"
 		document_representation: (str) how to represent documents. Possible values: "unigram", "clause", "sentence", "document"
 		summary_stat: (list) list of summary statistics to compute. Possible values: "max", "min", "mean", "sum", "std"
@@ -130,15 +143,19 @@ def measure(
 		similarity_threshold: (None, float) avoid using very low cosine similarities by setting a threshold below which to replace with NaN. Should be tested given it will depend on the embeddings. Recommended possible values: None (do not apply) or float [0.3,0.7], will interact with count_if_exact_match argument. 
 		minmaxscaler: (tuple or False) range to scale summary statistics. Possible values: (int, int) or None
 		return_cosine_similarity: (bool) whether to return cosine similarity. Can occupy a lot of memory if you have many documents and many tokens per document. Possible values: True or False
-		embeddings_model: (str) name of sentence embeddings model. Possible values: see "Models" here: https://huggingface.co/sentence-transformers and here (click All models upper right corner of table): https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
-		document_embeddings_path: (str) path to store document embeddings. Possible values: file path
-		save_embeddings: (bool) whether to save document embeddings. 
-		save_partial_doc_embeddings: (bool) whether to save partial document embeddings. 
+		embeddings_model: (None, str) name of sentence embeddings model. Possible values: see "Models" here: https://huggingface.co/sentence-transformers and here (click All models upper right corner of table): https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
+		load_document_embeddings: (str) path to load document embeddings. Possible values: None, file path str
+		save_lexicon_embeddings: (bool) whether to save lexicon embeddings. 
 		stored_embeddings_path: (str) path to pickle of stored embeddings. 
+		save_doc_embeddings: (bool) whether to save document embeddings. WARNING: Can be an extremenly heavy file (16GB for 5000 conversations, 1 embedding per phrase), which will take time to save and load.
+		save_partial_doc_embeddings: (bool) whether to save partial document embeddings. 
 		skip_nan: (bool) whether to skip documents with no embeddings. 
 		remove_stat_name_from_col_name: (bool) whether to remove summary stat name from column name. 
 		doc_id_col_name: (str) name of doc_id column. 
+		save_dir (str, optional): Directory to save the extracted features (will save with relevant filenames and name of lexicon). Defaults to False.
+		save_append_to_filename (str, optional): Append this to filename. Defaults to None.
 		verbose: (bool) whether to print progress (True) or just warnings (False).
+	
 
 	Returns:
 		tuple: A tuple containing the feature vectors for the document and the cosine scores for each construct.
@@ -149,6 +166,14 @@ def measure(
 	else:
 		logger.setLevel(logging.WARNING)
 	
+	embeddings_model_clean = embeddings_model.split('/')[-1]
+
+	logger.info("\n =============================================")	
+	
+	if isinstance(documents_df, pd.DataFrame):
+		try: assert documents_df.shape[0]==len(documents)
+		except:
+			raise ValueError("documents_df should have the same amount of rows as the length of documents")
 	
 	# Make sure summary_stat is a single statistic, and recommedn using ['max']
 	if count_if_exact_match:
@@ -167,15 +192,26 @@ def measure(
 
 	
 	if stored_embeddings_path is not None:
-		logger.info("Loading existing lexicon token embeddings")	
+		logger.info("Loading existing lexicon token embeddings...")	
 		stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
 		# If you need to encode new tokens:
 		tokens_to_encode = [n for n in lexicon_tokens_concat if n not in stored_embeddings.keys()]
 
 	else:
-		logger.warning("stored_embeddings_path is None. Extracting all lexicon token embeddings from scratch instead of loading stored embeddings...")	
-		stored_embeddings = {}
-		stored_embeddings_path = 'lexicon_embeddings.pickle'
+		os.makedirs(f'./data/embeddings/', exist_ok=True)
+		stored_embeddings_path = f'./data/embeddings/{embeddings_model_clean}.pickle'
+		# Try loading default dir
+		try: 
+			logger.warning(f"stored_embeddings_path is None. Checking if {stored_embeddings_path} exists...")	
+			stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
+			logger.info(f"Loaded existing lexicon token embeddings from: {stored_embeddings_path}")	
+
+		except: 
+			# If you need to encode new tokens:
+			tokens_to_encode = [n for n in lexicon_tokens_concat if n not in stored_embeddings.keys()]
+			logger.warning("Did not find it. Extracting all lexicon token embeddings from scratch instead of loading stored embeddings...")	
+			stored_embeddings = {}
+			
 
 
 	sentence_embedding_model = SentenceTransformer(embeddings_model)       # load embedding
@@ -190,7 +226,7 @@ def measure(
 		embeddings = sentence_embedding_model.encode(tokens_to_encode, convert_to_tensor=True,show_progress_bar=True)	
 		embeddings_d = dict(zip(tokens_to_encode, embeddings))
 		stored_embeddings.update(embeddings_d)
-		logger.info(f"Finished encoding construct tokens.")
+		
 		# save pickle of embeddings
 		if save_lexicon_embeddings:
 			logger.info(f"Saving lexicon token embeddings here: {stored_embeddings_path}")
@@ -229,44 +265,80 @@ def measure(
 		# TODO: add arguments as measure() arguments using kwargs.
 		
 		docs_tokenized = spacy_tokenizer(documents, 
-										language = 'en', model='en_core_web_sm', 
 										method = document_representation,
 										lowercase=False, 
 										display_tree = False, 
 										remove_punct=False, 
 										clause_remove_conj = True)
-		logger.info("Finished tokenization.")
+		
 
+	
+	# Encoding documents
 	ts = datetime.datetime.utcnow().strftime('%y-%m-%dT%H-%M-%S')
 	docs_embeddings_d = {}
 	i_str_all = []
 	logger.info("Encoding all document tokens...")
+
+
+	if save_dir:
+		if save_dir[-1] == '/':
+			save_dir = save_dir + f'cts-scores_count-{count_if_exact_match}_thresh-{str(similarity_threshold).replace(".","")}_{save_append_to_filename}_{lexicon.generate_timestamp(format="%y-%m-%dT%H-%M-%S")}/'
+		else:
+			save_dir = save_dir + f'/cts-scores_count-{count_if_exact_match}_thresh-{str(similarity_threshold).replace(".","")}_{save_append_to_filename}_{lexicon.generate_timestamp(format="%y-%m-%dT%H-%M-%S")}/'
+		os.makedirs(save_dir, exist_ok=True)
+
 	
-	
-	if save_doc_embeddings:
-		# todo add ts
-		document_embeddings_path = document_embeddings_path+f'_{ts}/'
-		os.makedirs(document_embeddings_path, exist_ok=True)
+	# Flatten the list of lists into a single list while keeping track of the keys
+	flattened_docs = []
+	keys = []
 	for i, list_of_clauses in enumerate(docs_tokenized):
-		docs_embeddings_d[i] = sentence_embedding_model.encode(list_of_clauses, convert_to_tensor=True,show_progress_bar=False)	
+		flattened_docs.extend(list_of_clauses)
+		keys.extend([i] * len(list_of_clauses))
+
+	# Encode in batches
+	
+	encoded_batches = []
+	for i in tqdm.tqdm(range(0, len(flattened_docs), doc_encoding_batch_size)):
+		batch = flattened_docs[i:i + doc_encoding_batch_size]
+		encoded_batch = sentence_embedding_model.encode(batch, convert_to_tensor=True)
+		encoded_batches.extend(encoded_batch)
+
+	# Store embeddings in the dictionary
+	docs_embeddings_d = {}
+	current_index = 0
+	for i, list_of_clauses in enumerate(docs_tokenized):
+		docs_embeddings_d[i] = encoded_batches[current_index:current_index + len(list_of_clauses)]
+		current_index += len(list_of_clauses)
+
+	# Convert the list of embeddings for each key into tensors or desired format
+	# for key in docs_embeddings_d:
+	# 	docs_embeddings_d[key] = torch.stack(docs_embeddings_d[key])  # This assumes you want a tensor
+
+
+	# for i, list_of_clauses in tqdm.tqdm(enumerate(docs_tokenized), position=0 ):
+	# 	docs_embeddings_d[i] = sentence_embedding_model.encode(list_of_clauses, convert_to_tensor=True)	
 
 		if save_doc_embeddings and save_partial_doc_embeddings and i%500==0:
 			# save partial ones in case it fails during the process
 			i_str = str(i).zfill(5)
 			i_str_all.append(i_str)
-			with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle', 'wb') as handle:
+			# os.makedirs(save_dir, exist_ok=True)
+			# embeddings_model_clean = embeddings_model_clean.replace('/','_') 
+			
+			with open(save_dir+f'embeddings_{embeddings_model_clean}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle', 'wb') as handle:
 				pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
+				
 
 	# save final one
 	if save_doc_embeddings:
-		logger.info("Saving document embeddings here: "+document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}.pickle')
-		with open(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}.pickle', 'wb') as handle:
+		logger.info("Saving document embeddings here: "+save_dir+f'embeddings_{embeddings_model_clean}_docs_{document_representation}_with-interaction_{ts}.pickle')
+		with open(save_dir+f'embeddings_{embeddings_model_clean}_docs_{document_representation}_with-interaction_{ts}.pickle', 'wb') as handle:
 			pickle.dump(docs_embeddings_d, handle, protocol=pickle.HIGHEST_PROTOCOL)
 	
 	# remove partial ones
 	if save_doc_embeddings and save_partial_doc_embeddings:
 		for i_str in i_str_all:
-			os.remove(document_embeddings_path+f'embeddings_{embeddings_model}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle')
+			os.remove(save_dir+f'embeddings_{embeddings_model_clean}_docs_{document_representation}_with-interaction_{ts}_part-{i_str}.pickle')
 
 	
 	# Compute cosine similarity
@@ -289,7 +361,7 @@ def measure(
 	
 	feature_vectors_all = pd.concat(feature_vectors_all).reset_index(drop=True) 
 	
-	logger.info('Finished.')
+
 
 		# Scale between 0 and 1 to follow output range of other classification models.
 	if minmaxscaler is not None:
@@ -311,26 +383,32 @@ def measure(
 	# =================================================================================================
 	if count_if_exact_match:
 		if not isinstance(lexicon_counts, pd.DataFrame):
+			
 			# if you did not provide the counts DF, lexicon_counts will be None, and it will be generated here 
+			logger.info('Adding lexicon tokens to a new lexicon to count exact matches...')
 			new_lexicon = lexicon.Lexicon()
 			for c in lexicon_dict.keys():
 				new_lexicon.add(c, section = 'tokens', value = lexicon_dict[c], verbose = False)
-		
-			counts, matches_by_construct, matches_doc2construct, matches_construct2doc  = new_lexicon.extract(documents,
+			logger.info('Lemmatizing tokens...')
+			new_lexicon = lexicon.lemmatize_tokens(new_lexicon)
+			
+			logger.info('Counting exact matches lexicon.extract()...')
+			lexicon_counts, matches_by_construct, matches_doc2construct, matches_construct2doc  = new_lexicon.extract(documents,
 																								normalize = False,
 																								)
+		
 
-		counts = counts[list(lexicon_dict.keys())]
+		lexicon_counts = lexicon_counts[list(lexicon_dict.keys())]
 		if not remove_stat_name_from_col_name:
-			counts.columns = [n+f'_{summary_stat[0]}' for n in counts.columns]
+			lexicon_counts.columns = [n+f'_{summary_stat[0]}' for n in lexicon_counts.columns]
 		
 		# display(counts)
 		# display(feature_vectors_all)
 		if count_if_exact_match == 'sum':
-			feature_vectors_all[counts.columns] = feature_vectors_all[counts.columns]+counts
+			feature_vectors_all[lexicon_counts.columns] = feature_vectors_all[lexicon_counts.columns]+lexicon_counts
 			
 		elif count_if_exact_match == 'replace':
-			feature_vectors_all = counts.where(counts >= 1, feature_vectors_all)
+			feature_vectors_all = lexicon_counts.where(lexicon_counts >= 1, feature_vectors_all)
 	
 	# feature_vectors_all[doc_id_col_name] = range(len(feature_vectors_all))
 
@@ -340,17 +418,53 @@ def measure(
 	
 	# add documents
 	construct_columns = list(feature_vectors_all.columns[1:])
-	feature_vectors_all['documents'] = documents 
+	feature_vectors_all['document'] = documents 
 	feature_vectors_all['documents_tokenized'] = docs_tokenized
 	# reorder
-	feature_vectors_all = feature_vectors_all[[doc_id_col_name, 'documents', 'documents_tokenized'] +construct_columns]
-	# feature_vectors_all.sort_values(by=[doc_id_col_name], inplace=True)
-	feature_vectors_all.reset_index(drop=True, inplace=True)
-
-
+	feature_vectors_all = feature_vectors_all[['document', 'documents_tokenized'] +construct_columns]
 	
+	feature_vectors_all.reset_index(drop=True, inplace=True)
+	# feature_vectors_all.drop(doc_id_col_name, axis=1, inplace=True) # this is not in the right order to either dictionary or parallelization done above
+
+	if isinstance(documents_df, pd.DataFrame):
+
+		documents_df.reset_index(drop=True, inplace=True)
+		feature_vectors_all = pd.concat([documents_df , feature_vectors_all], axis=1)
+
+	if save_append_to_filename:
+		save_append_to_filename = "_"+save_append_to_filename
+	else:
+		save_append_to_filename = ""
+
+	if save_dir:
+		
+		# write a txt with arguments
+		frame = inspect.currentframe()
+		args, _, _, values = inspect.getargvalues(frame)
+		arguments = {arg: values[arg] for arg in args}
+		
+		exclude = ['documents', 'documents_df', 'cosine_scores_docs_all', 'lexicon_counts', 'list_of_clauses', 'keys', 'encoded_batches']
+		with open(save_dir+f"arguments_log{save_append_to_filename}.txt", "w") as file:
+			for name, value in arguments.items():
+				if name not in exclude:
+					file.write(f"{name}: {value}\n")
+
+		feature_vectors_all.to_csv(save_dir + f'cts_scores.csv', index=False)
+		# save lexicon_dict_final_order as json with indent
+		with open(save_dir + f'lexicon_dict_final_order{save_append_to_filename}.json', 'w', encoding='utf-8') as f:
+			json.dump(lexicon_dict_final_order, f, ensure_ascii=False, indent=4)
+		
+		# save cosine_scores_docs_all as compressed pickle
+		with gzip.open(save_dir + f'cosine_similarities{save_append_to_filename}.pkl.gz', 'wb') as f:
+			pickle.dump(cosine_scores_docs_all, f, protocol=pickle.HIGHEST_PROTOCOL)
+		
+
+		
+
+
 	if return_cosine_similarity:
-		return feature_vectors_all, docs_tokenized, lexicon_dict_final_order, cosine_scores_docs_all
+		
+		return feature_vectors_all, lexicon_dict_final_order, cosine_scores_docs_all
 	else:
 		return feature_vectors_all
 	
@@ -375,7 +489,7 @@ def get_highest_similarity_phrase(doc_id, construct, documents, documents_tokeni
 	display(HTML(document))
 
 	return most_similar_lexicon_token, most_similar_document_token, highest_similarity
-
+ 
 
 
 

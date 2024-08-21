@@ -1,5 +1,6 @@
 import datetime
 import json
+import inspect
 import re
 import os
 import sys
@@ -581,7 +582,7 @@ class Lexicon:
 		os.makedirs(output_dir, exist_ok=True)
 		
 		if filename is None:
-			filename = self.name.replace(" ", "-")
+			filename = self.name.replace(" ", "-").lower()
 		path = output_dir+"/"+filename
 		if timestamp:
 			if isinstance(timestamp, str):
@@ -611,6 +612,7 @@ class Lexicon:
 	def extract(
 		self,
 		docs,
+		documents_df = None,
 		normalize=True,
 		return_zero=[],
 		return_matches=True,
@@ -620,11 +622,14 @@ class Lexicon:
 		exact_match_n=4,
 		exact_match_tokens=[],
 		save_dir = False,
+		save_append_to_filename = None, 
 		save_as = 'json'
 	):
 		# TODO: return zero is for entire docs, shouldnt it be for tokens?
 		"""
 		docs (list): List of documents.
+		documents_df: (None or pandas dataframe) concatenate the output DF to this dataframe (should have the same amount of rows)
+
 			normalize (bool, optional): Whether to normalize the extracted features by word count. 3 matches in a short document would be weighed higher than in a long document. Defaults to True.
 			return_zero (list, optional): List of tokens to return 0 for their count (e.g., if it is often producing errors). Defaults to [].
 			return_matches (bool, optional): Whether to return matches. Defaults to True.
@@ -633,7 +638,20 @@ class Lexicon:
 			lemmatize_docs (bool, optional): Whether to lemmatize documents (this would find more matches, but be less interpretable because we wouldn't know the unlemmatized token it is matching, and may capture false positives). Defaults to False.
 			exact_match_n (int, optional): (if a lexicon token is short, it would a substring of many document words, creating false positives (5 characters and more). The maximum length of exact matches. Defaults to 4.
 			exact_match_tokens (list, optional): List of exact match tokens. Defaults to [].
+			save_dir (str, optional): Directory to save the extracted features (will save with relevant filenames and name of lexicon). Defaults to False.
+			save_append_to_filename (str, optional): Append this to filename. Defaults to None.
+			save_as (json, pickle, optional): Format of the saved dictionaries. Defaults to 'json'.
 		"""
+
+
+		
+		
+		if isinstance(documents_df, pd.DataFrame):
+			try: assert documents_df.shape[0]==len(docs)
+			except:
+				raise ValueError("documents_df should have the same amount of rows as the length of documents")
+	
+		
 		lexicon_dict = self.constructs.copy() # keys are constructs, values are dictionaries with tokens, definitions and other metadata.
 		docs = [doc.replace("\n", " ").replace("  ", " ").replace("“", "").replace("”", "") for doc in docs]
 		if lemmatize_docs:
@@ -682,7 +700,7 @@ class Lexicon:
 				if lexicon_tokens == []:
 					# Lemmatize
 					logger.warning(
-						"Lemmatizing the tokens. We recommend you lemmatize before extracting so you can save time if you"
+						"Lemmatizing the lexicon tokens. We recommend you lemmatize before extracting (my_lexicon = lemmatize_tokens(my_lexicon)) so you can save time if you"
 						" want to repeat extraction on different documents."
 					)
 					lexicon_tokens = lexicon_dict.get(construct)["tokens"]
@@ -694,13 +712,13 @@ class Lexicon:
 					lexicon_tokens_lemmatized = [" ".join(n) for n in lexicon_tokens_lemmatized]
 					lexicon_tokens += lexicon_tokens_lemmatized
 					lexicon_tokens = list(np.unique(lexicon_tokens))  # unique set
+					# save
+					lexicon_dict.get(construct)["tokens_lemmatized"] = lexicon_tokens
+					
+					# Save
+					self.constructs[construct]["tokens_lemmatized"] = lexicon_tokens
 
-					# lexicon_dict[construct]['tokens_lemmatized']=lexicon_tokens
-				# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in lexicon)
-				# 	lexicon_tokens_lemmatized = lemmatizer.spacy_lemmatizer(lexicon_tokens, language='en') # custom function
-				# 	lexicon_tokens_lemmatized = [' '.join(n) for n in lexicon_tokens_lemmatized]
-				# 	lexicon_tokens += lexicon_tokens_lemmatized
-				# 	lexicon_tokens = list(np.unique(lexicon_tokens)) # unique set
+				
 
 			else:
 				lexicon_tokens = lexicon_dict.get(construct)["tokens"]
@@ -798,6 +816,12 @@ class Lexicon:
 		if save_dir:
 			lexicon_name_clean = generate_variable_name(
 						str(self.name) + '_v' + str(self.version))
+			if save_dir[-1] == '/':
+				save_dir = save_dir+ f'{lexicon_name_clean}_counts_and_matches_'+generate_timestamp(format="%y-%m-%dT%H-%M-%S")+'/'
+			else:
+				save_dir = save_dir + f'/{lexicon_name_clean}_counts_and_matches_'+generate_timestamp(format="%y-%m-%dT%H-%M-%S")+'/'
+			os.makedirs(save_dir, exist_ok=True)
+
 
 		if return_matches:
 			# all lexicons
@@ -809,33 +833,67 @@ class Lexicon:
 						k: v for k, v in sorted(x.items(), key=lambda item: item[1], reverse=True)
 					}
 			# Counter([n for i in matches.get(lexicon_name_i) for n in i]) for lexicon_name_i in lexicon_dict.keys()]
+			
+			if isinstance(documents_df, pd.DataFrame):
+				documents_df.reset_index(drop=True, inplace=True)
+				feature_vectors_df = pd.concat([documents_df , feature_vectors_df], axis=1)
+			
 			if save_dir:
-				os.makedirs(save_dir, exist_ok=True)
-				feature_vectors_df.to_csv(save_dir+lexicon_name_clean+'_counts.csv', index=False)
+
+
+				if save_append_to_filename:
+					save_append_to_filename = "_"+save_append_to_filename
+				else:
+					save_append_to_filename = ""
+				filename = lexicon_name_clean+f'_counts{save_append_to_filename}.csv'
+				feature_vectors_df.to_csv(save_dir+filename, index=False)
+				# write a txt with arguments
+				frame = inspect.currentframe()
+				args, _, _, values = inspect.getargvalues(frame)
+				arguments = {arg: values[arg] for arg in args}
+		
+				exclude = ['documents', 'documents_df', 'cosine_scores_docs_all', 'docs']
+				with open(save_dir+f"arguments_log{save_append_to_filename}.txt", "w") as file:
+					for name, value in arguments.items():
+						if name not in exclude:
+							file.write(f"{name}: {value}\n")
 				
 				if save_as == 'pickle':
 					# more lightweight
-					pickle.dump(matches_by_construct, open(save_dir+lexicon_name_clean+'_matches_by_construct.pickle', "wb"))
-					pickle.dump(matches_doc2construct, open(save_dir+lexicon_name_clean+'_matches_doc2construct.pickle', "wb"))
-					pickle.dump(matches_construct2doc, open(save_dir+lexicon_name_clean+'_matches_construct2doc.pickle', "wb"))
+					pickle.dump(matches_by_construct, open(save_dir+lexicon_name_clean+f'_matches_by_construct{save_append_to_filename}.pickle', "wb"))
+					pickle.dump(matches_doc2construct, open(save_dir+lexicon_name_clean+f'_matches_doc2construct{save_append_to_filename}.pickle', "wb"))
+					pickle.dump(matches_construct2doc, open(save_dir+lexicon_name_clean+f'_matches_construct2doc{save_append_to_filename}.pickle', "wb"))
 				elif save_as == 'json':
-					with open(save_dir+lexicon_name_clean+'_matches_by_construct.json', 'w') as json_file:
+					with open(save_dir+lexicon_name_clean+f'_matches_by_construct{save_append_to_filename}.json', 'w') as json_file:
 						json.dump(matches_by_construct, json_file, indent=4)
-					with open(save_dir+lexicon_name_clean+'_matches_doc2construct.json', 'w') as json_file:
+					with open(save_dir+lexicon_name_clean+f'_matches_doc2construct{save_append_to_filename}.json', 'w') as json_file:
 						json.dump(matches_doc2construct, json_file, indent=4)
-					with open(save_dir+lexicon_name_clean+'_matches_construct2doc.json', 'w') as json_file:
+					with open(save_dir+lexicon_name_clean+f'_matches_construct2doc{save_append_to_filename}.json', 'w') as json_file:
 						json.dump(matches_construct2doc, json_file, indent=4)
 
 			return feature_vectors_df, matches_by_construct, matches_doc2construct, matches_construct2doc
 		else:
 			if save_dir:
-				os.makedirs(save_dir, exist_ok=True)
-				feature_vectors_df.to_csv(save_dir+self.variable_name+'_counts.csv', index=False)
+				if save_append_to_filename:
+					save_append_to_filename = "_"+save_append_to_filename
+				else:
+					save_append_to_filename = ""
+				filename = lexicon_name_clean+f'_counts{save_append_to_filename}.csv'
+				feature_vectors_df.to_csv(save_dir+filename, index=False)
+				# write a txt with arguments
+				frame = inspect.currentframe()
+				args, _, _, values = inspect.getargvalues(frame)
+				arguments = {arg: values[arg] for arg in args}
+				exclude = ['documents', 'documents_df', 'docs']
+				with open(save_dir+f"arguments_log{save_append_to_filename}.txt", "w") as file:
+					for name, value in arguments.items():
+						if name not in exclude:
+							file.write(f"{name}: {value}\n")
 			return feature_vectors_df
 
 
 
-def generate_timestamp(format="%y-%m-%dT%H-%M-%S.%f"):
+def generate_timestamp(format="%y-%m-%dT%H-%M-%S-%f"):
 	ts = datetime.datetime.utcnow().strftime(format)  # so you don't overwrite, and save timestamp
 	return ts
 
@@ -844,9 +902,9 @@ def load_lexicon(name = None, path = None):
 	script_dir = os.path.dirname(__file__)  # Directory of the script being run
 
 	if name == 'srl_v1-0':
-		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_24-08-02T21-27-35.159565.pickle')
+		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_24-08-02T21-27-35.pickle')
 	elif name == 'srl_prototypes_v1-0':
-		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_prototypical_tokens_24-08-07T16-25-19.379659.pickle')
+		path = os.path.join(script_dir, 'data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_prototypical_tokens_24-08-07T16-25-19.pickle')
 	else:
 		# Assuming the user provided a path, it should be an absolute path or relative to script_dir
 		path = os.path.join(script_dir, path) if path else None
@@ -1081,7 +1139,7 @@ def match(docs, token):
 
 def lemmatize_tokens(lexicon_object):
 	# TODO: do not lemmatize "I", hit me > hit I, cut my > cut I, same with her and him> block he, block her. UNLESS you lemmatize the doc as well.
-	for c in tqdm(lexicon_object.constructs.keys()):
+	for c in tqdm(lexicon_object.constructs.keys(), position = 0):
 		srl_tokens = lexicon_object.constructs[c]["tokens"].copy()
 		# If you add lemmatized and nonlemmatized you'll get double count in many cases ("plans" in doc will be matched by "plan" and "plans" in srl)
 		srl_tokens_lemmatized = lemmatizer.spacy_lemmatizer(srl_tokens, language="en")  # custom function
@@ -1132,7 +1190,7 @@ def display_highlighted_documents(highlighted_documents):
 	for doc in highlighted_documents:
 		display(HTML(doc))
 
-def highlight_matches(documents, construct, N, matches_construct2doc, shuffle = True, random_seed = 42):
+def highlight_matches(documents, construct, matches_construct2doc, max_matches = 3, shuffle = True, random_seed = 42):
 
 	"""
 	Highlight the matches of a given construct in the provided documents.
@@ -1140,7 +1198,7 @@ def highlight_matches(documents, construct, N, matches_construct2doc, shuffle = 
 	Args:
 		documents (List[str]): The list of documents to search for matches.
 		construct (str): The construct to search for matches.
-		N (int): The maximum number of matches to highlight, if available.
+		max_matches (int): The maximum number of matches to highlight, if available. Default = 3. 
 		matches_construct2doc (Dict[str, List[Tuple[int, List[str]]]]]): A dictionary mapping constructs to their corresponding matches in the documents.
 
 	Returns:

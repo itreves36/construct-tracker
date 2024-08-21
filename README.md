@@ -1,6 +1,8 @@
 # construct-tracker
 Track and measure constructs, concepts or categories in text documents. Built on top of the litellm package to use most Generative AI models. 
 
+**If you use, please cite**: Low DM, Rankin O, Coppersmith DDL, Bentley KH, Nock MK, Ghosh SS (2024). Building lexicons with generative AI result in lightweight and interpretable text models with high content validity. arXiv.
+
 
 # Installation
 
@@ -12,7 +14,7 @@ pip install construct-tracker
 
 [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/construct_tracker.ipynb)
 
-## 1. Create a lexicon: keywords prototypically associated to a construct
+## Create a lexicon: keywords prototypically associated to a construct
 
 We want to know if these documents contain mentions of certain construct "insight"
 
@@ -64,11 +66,12 @@ display(feature_vectors)
 |         2 |           17 |
 |         0 |            8 |
 ``` -->
+
 This traditional approach is perfectly interpretable. The first document contains three matches related to insight. Let's see which ones with `highlight_matches()`:
 
 
 ```python
-lexicon.highlight_matches(documents, 'Insight',show_n_sentences, matches_construct2doc)
+lexicon.highlight_matches(documents, 'Insight', matches_construct2doc, max_matches = 1)
 ```
 
 
@@ -83,16 +86,18 @@ print(matches_per_doc)
 ``` -->
 <br><br>
 
-## 2. Construct-text similarity (CTS): finding similar phrases to tokens in your lexicon
+
+
+<!-- ## 2. Construct-text similarity (CTS): finding similar phrases to tokens in your lexicon
 
 ### Like Ctrl+F on steroids!
 Lexicons may miss relevant words if not contained in the lexicon (it only counts exact matches). Embeddings can find semantically similar tokens. CTS will scan the document and return how similar is the most related phrase to any word in the lexicon. 
 
 <!-- magick -density 300 docs/images/cts.pdf -background white -alpha remove -quality 100 docs/images/cts.png -->
-<img src="docs/images/cts.png" alt="Construct-text similarity" width="650"/>
+<!-- <img src="docs/images/cts.png" alt="Construct-text similarity" width="650"/> -->
 
-It will vectorize lexicon tokens and document tokens (e.g., phrases) into embeddings (quantitivae vector representing aspects of meaning). Then it will compute the similarity between both sets of tokens and return the maximum similarity as its score for the document. 
-
+<!-- It will vectorize lexicon tokens and document tokens (e.g., phrases) into embeddings (quantitivae vector representing aspects of meaning). Then it will compute the similarity between both sets of tokens and return the maximum similarity as its score for the document.  -->
+<!-- 
 
 ```python
 lexicon_dict = my_lexicon.to_dict()
@@ -106,7 +111,7 @@ display(features)
 ```
 <img src="docs/images/cts_scores.png" alt="Construct-text similarity" width="700"/>
 
-So we see that even though compassion did not find an exact match it had some relationship to the first two documents. 
+So we see that even though compassion did not find an exact match it had some relationship to the first two documents.  --> 
 
 
 
@@ -125,36 +130,35 @@ We provide many features to add/remove tokens, generate definitions, validate wi
 We have created a lexicon with 49 risk factors for suicidal thoughts and behaviors validated by clinicians who are experts in suicide research. 
 ```python
 from construct_tracker import lexicon
-
 # Load lexicon
-srl = lexicon.load_lexicon('./src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_24-08-02T21-27-35.159565.pickle')
+srl = lexicon.load_lexicon(name = 'srl_v1-0')
 # Load only tokens that are highly prototypical of each construct
-srl_prototypes = lexicon.load_lexicon('./src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/suicide_risk_lexicon_validated_prototypical_tokens_24-08-07T16-25-19.379659.pickle') 
-
-lexicon_dict = srl.to_dict()
+srl_prototypes = lexicon.load_lexicon(name = 'srl_prototypes_v1-0') 
+```
+<!-- lexicon_dict = srl.to_dict()
 features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = cts.measure(
     lexicon_dict,
     documents_subset,
     )
-```
 
-<img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> -->
+<img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> --> 
 
 
 <br>
+
 # Structure of the `lexicon.Lexicon()` object
 
 ```python
-
-# General info on Lexicon
+# Save general info on the lexicon
 my_lexicon = lexicon.Lexicon()			# Initialize lexicon
 my_lexicon.name = 'Insight'		# Set lexicon name
-my_lexicon.description = 'Insight lexicon with constructs inspired by items of the Emotional Insight Scale'
+my_lexicon.description = 'Insight lexicon with constructs related to insight, mindfulness, and compassion'
 my_lexicon.creator = 'DML' 				# your name or initials for transparency in logging who made changes
 my_lexicon.version = '1.0'				# Set version. Over time, others may modify your lexicon, so good to keep track. MAJOR.MINOR. (e.g., MAJOR: new constructs or big changes to a construct, Minor: small changes to a construct)
 
-# Each construct is a dict. You can save a lot of metadata for each construct:
-my_lexicon.constructs = {
+# Each construct is a dict. You can save a lot of metadata depending on what you provide for each construct, for instance:
+print(my_lexicon.constructs)
+{
  'Insight': {
 	'variable_name': 'insight', # a name that is not sensitive to case with no spaces
 	'prompt_name': 'insight',
@@ -185,7 +189,12 @@ my_lexicon.constructs = {
 }
 ```
 
-# Contributing and pull requests
+<!-- # Other features -->
+<!-- TODO -->
+
+
+# Contributing
+<!-- TODO -->
 
 See `docs/contributing.md`
 
