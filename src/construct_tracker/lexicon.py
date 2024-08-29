@@ -3,19 +3,15 @@ import json
 import inspect
 import re
 import os
-import sys
 import time
 import random
-import warnings
 from collections import Counter
 import dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import ast
 
 # Local
-# sys.path.append("/Users/danielmlow/Dropbox (MIT)/datum/construct-tracker/")
 from .genai import api_request  # local
 from .utils import lemmatizer  # local / construct-tracker package
 from .utils.word_count import word_count  # local

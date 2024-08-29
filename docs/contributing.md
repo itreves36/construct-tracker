@@ -8,9 +8,9 @@ Note that a code of conduct applies to all spaces managed by the `construct-trac
 ## Workflow
 Please use the following workflow when contributing:
 
-0. **Install poetry and poetry-dynamic-versioning plugin for dynamic versioning**:
-  - ```pipx install poetry==1.7.1```
-  - ```pipx inject poetry "poetry-dynamic-versioning[plugin]"```
+0. **Install poetry and versioneer for dynamic versioning**:
+  - ```pip install poetry==1.7.1```
+  - ```pip install versioneer```
 1. **Create an issue**: Use GitHub to create an issue, assign it to yourself (and any collaborators)
 2. **Create a branch**: Use GitHub's "Create a branch" button from the issue page to generate a branch associated with the issue. 
 3. **Clone the repo locally**:
@@ -31,7 +31,7 @@ Please use the following workflow when contributing:
         ```poetry run pytest```
     - Please, document your code following [Google style guidelines](https://google.github.io/styleguide/) and the example at the end of this document.
       You can manually check the documentation automatically generated from the docstrings:
-      ```poetry run pdoc src/construct-tracker -t docs_style/pdoc-theme --docformat google```.
+      ```poetry run pdoc src/construct_tracker -t docs_style/pdoc-theme --docformat google```.
       This command uses ```pdoc``` to generate the documentation for you and make it accessible through a web interface.
     - If you installed the pre-commit hooks properly, some tests and checks will run, and the commit will succeed if all tests pass. If you prefer to run your tests manually, use the following commands:
       - Static type checks:
@@ -120,6 +120,7 @@ Create a new tag in the form ``*.*.*``.
 ```
 conda activate construct_poetry #created before
 pip install poetry # create file with dependencies
+poetry add pdocs
 poetry config virtualenvs.in-project true
 poetry lock
 poetry install
