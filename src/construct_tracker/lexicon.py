@@ -5,11 +5,15 @@ import re
 import os
 import time
 import random
+import string
+import re
 from collections import Counter
 import dill
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from typing import Any, Dict, List, Optional, Tuple, Union
+from IPython.display import HTML, display
 
 # Local
 from .genai import api_request  # local
@@ -20,49 +24,72 @@ from .utils.logger_config import setup_logger
 # Set up the logger
 logger = setup_logger()
 
+def generate_variable_name(variable_str: str) -> str:
+	"""Replace spaces with underscores, lowercase the string, and remove certain punctuation.
 
-def generate_variable_name(str):
-	"""
-	Replace spaces with undersore, lower-case, remove certain punctuation
-	:param str:
-	:return:
+	Args:
+		variable_str: The string to convert.
+
+	Returns:
+		The converted string.
 	"""
 	variable_name = (
-		str.replace(",", "").replace(" & ", "_").replace(" and ", "_").replace(" ", "_").replace("-", "_").lower()
+		variable_str.replace(",", "")
+		.replace(" & ", "_")
+		.replace(" and ", "_")
+		.replace(" ", "_")
+		.replace("-", "_")
+		.lower()
 	)
 	return variable_name
 
 
-# TODO: set prompt with template for construct so we don't need to set it before every construct
+
+
 def generate_prompt(
-	construct,
-	prompt_name=None,
-	prompt="default",
-	domain=None,
-	definition=None,
-	examples=None,
-	output_format="default",
-	remove_parentheses_definition=True,
-):
+	construct: str,
+	prompt_name: Optional[str] = None,
+	prompt: str = "default",
+	domain: Optional[str] = None,
+	definition: Optional[str] = None,
+	examples: Optional[Union[List[str], str]] = None,
+	output_format: str = "default",
+	remove_parentheses_definition: bool = True,
+) -> str:
+	"""Generate a prompt based on provided parameters.
+
+	Args:
+		construct: The construct for which the prompt is generated.
+		prompt_name: Optional; the name of the prompt.
+		prompt: Optional; the prompt template.
+		domain: Optional; the domain of the construct.
+		definition: Optional; the definition of the construct.
+		examples: Optional; examples related to the construct.
+		output_format: Optional; the format of the output.
+		remove_parentheses_definition: Optional; whether to remove parentheses from the definition.
+
+	Returns:
+		The generated prompt.
+	"""
 	if output_format == "default":
 		output_format = (
 			"Each token should be separated by a semicolon. Do not return duplicate tokens. Do not provide any"
 			" explanation or additional text beyond the tokens."
 		)
-	# removed: Order them by how similar they are to {construct}.
 	elif output_format == "json":
 		output_format = (
 			"Provide tokens in JSON output. Do not return duplicate tokens. Do not provide any explanation or"
 			" additional text beyond the tokens."
 		)
 
-	# Prompt
 	if not isinstance(prompt_name, str):
-		# if prompt_name == None:
 		prompt_name = construct.replace("_", " ").lower()
 
 	if prompt == "default":
-		prompt = "Provide many single words and some short phrases (all in lower case unless the word is generally in upper case) related to"
+		prompt = (
+			"Provide many single words and some short phrases (all in lowercase unless the word is generally in"
+			" uppercase) related to"
+		)
 		if domain:
 			domain = f"(in the {domain} domain). "
 			prompt = f"""{prompt} {prompt_name} {domain}{output_format}"""
@@ -70,32 +97,29 @@ def generate_prompt(
 			prompt = f"""{prompt} {prompt_name}. {output_format}"""
 		if definition:
 			if remove_parentheses_definition:
-				definition = re.sub(r"\(.*?\)", "", definition)  # remove parentheses which is usually citation.
-			prompt += f"\nHere is a definition of {prompt_name}: {definition.lower().strip()}"
+				definition = re.sub(r"\(.*?\)", "", definition.lower().strip())
+			prompt += f"\nHere is a definition of {prompt_name}: {definition}"
 
 		if isinstance(examples, list):
 			examples = "; ".join(examples)
 		if isinstance(examples, str):
-			# examples = '; '.join(examples)
 			prompt += f"\nHere are some examples (include these in the list): {examples}"
 
 	return prompt
 
 
-def find_partial_matching_strings(list_a, list_b):
-	"""
-	Finds strings in list_a that contain any of the strings in list_b,
-	but does not return the string if it is identical to an element in list_b.
+def find_partial_matching_strings(
+	list_a: List[str], list_b: List[str]
+) -> Tuple[List[str], Dict[str, str]]:
+	"""Find strings in list_a that contain any of the strings in list_b, excluding exact matches.
 
-	Parameters:
-	list_a (list of str): The list of strings to search within.
-	list_b (list of str): The list of substrings to search for.
+	Args:
+		list_a: List of strings to search within.
+		list_b: List of substrings to search for.
 
 	Returns:
-	list of str: A list containing strings from list_a that have any of the substrings from list_b,
-																									 but are not identical to any string in list_b.
+		A tuple of lists containing partial matches and matched substrings.
 	"""
-
 	partial_matching_strings = []
 	matched_substrings = {}
 	for string_a in list_a:
@@ -106,24 +130,27 @@ def find_partial_matching_strings(list_a, list_b):
 	return partial_matching_strings, matched_substrings
 
 
-def count_lexicons_in_doc(doc, tokens=[], return_zero=[], return_matches=False):
-	# TODO, perhaps return match and context (3 words before and after)
-	"""
+def count_lexicons_in_doc(
+	doc: str,
+	tokens: Optional[List[str]] = None,
+	return_zero: Optional[List[str]] = None,
+	return_matches: bool = False,
+) -> Union[int, Tuple[int, List[str]]]:
+	"""Count occurrences of lexicon tokens in a document.
 
 	Args:
-																	doc:
-																	tokens: lexicon tokens
-																	return_zero:
-																	normalize:
-																	return_matches:
+		doc: The document text.
+		tokens: List of lexicon tokens.
+		return_zero: Optional; tokens to return zero for.
+		return_matches: Optional; whether to return matched tokens.
 
 	Returns:
-
+		The count of matches and optionally the matched tokens.
 	"""
+	tokens = tokens or []
+	return_zero = return_zero or []
 
-	text = re.sub(
-		"[^\\w\\d'\\s]+", "", doc.lower()
-	)  # remove punctuation except apostrophes because we need to search for things like "don't want to live"
+	text = re.sub("[^\\w\\d'\\s]+", "", doc.lower())
 	counter = 0
 	matched_tokens = []
 	for token in tokens:
@@ -138,47 +165,62 @@ def count_lexicons_in_doc(doc, tokens=[], return_zero=[], return_matches=False):
 		return counter
 
 
+def remove_substrings(s: str, substrings: List[str]) -> str:
+	"""Remove specified substrings from a string.
 
-def remove_substrings(s, substrings):
+	Args:
+		s: The string from which substrings are removed.
+		substrings: List of substrings to remove.
+
+	Returns:
+		The modified string.
+	"""
 	for substring in substrings:
 		s = s.replace(substring, "")
 	return s
 
 
 class Lexicon:
-	def __init__(self, name=None, description=None, version = '1.0', creator = None):
-		"""
-		Initializes the class with optional name and description parameters.
-		"""
+	"""A class to manage and manipulate lexicons."""
+
+	def __init__(
+		self,
+		name: Optional[str] = None,
+		description: Optional[str] = None,
+		version: str = "1.0",
+		creator: Optional[str] = None,
+	) -> None:
+		"""Initializes the class with optional name, description, and other attributes."""
 		self.name = name
 		self.description = description
 		self.version = version
 		self.creator = creator
-		self.constructs = {}
-		self.construct_names = []
+		self.constructs: Dict[str, Any] = {}
+		self.construct_names: List[str] = []
 		if isinstance(name, str):
-			# Load the lexicon if name is a string
 			self.constructs = load_lexicon(name)
 		self.exact_match_n = 4
-		self.exact_match_tokens = []
-		self.remove_from_all_constructs = []
-		self.attributes = {}  # for any other attribute to be added dynamically
+		self.exact_match_tokens: List[str] = []
+		self.remove_from_all_constructs: List[str] = []
+		self.attributes: Dict[str, Any] = {}
 
-		return
-
-	def set_attribute(self, key, value):
+	def set_attribute(self, key: str, value: Any) -> None:
+		"""Set an attribute for the lexicon."""
 		self.attributes[key] = value
 
-	def get_attribute(self, key, default=None):
+	def get_attribute(self, key: str, default: Optional[Any] = None) -> Any:
+		"""Get an attribute from the lexicon."""
 		return self.attributes.get(key, default)
 
-	def generate_definition(self, construct, model ='command-nightly', domain=None, timeout=45, num_retries=2):
-		""" """
-		# perhaps add: 'only what is is, not how it affects other things.""
-		# OLD: f"Provide a very brief definition of {construct} (in the {domain} domain)."
-		# prompt = f"""Please provide a brief definition of {construct} (in the {domain} domain). Provide reference in APA format where you got it from. Return result in the following string format:
-			# {construct}: the_definition
-			# reference: the_reference"""
+	def generate_definition(
+		self,
+		construct: str,
+		model: str = "command-nightly",
+		domain: Optional[str] = None,
+		timeout: int = 45,
+		num_retries: int = 2,
+			) -> Tuple[str, str]:
+		"""Generate a brief definition of a construct using a specified model."""
 		if domain:
 			prompt = f"""Please provide a brief definition of {construct} (in the {domain} domain). Provide reference in APA format where you got it from. Return result in the following string format:'''{{"{construct}": "the_definition", "reference":"the_reference"}}'''"""
 			# TODO: the formatting request might not work well for models worse than GPT-4
@@ -202,15 +244,21 @@ class Lexicon:
 
 		return definition, reference 
 
-	def clean_response(self, response, type="tokens"):
-		# print('0a', response)
+	def clean_response(self, response: str, response_type: str = "tokens") -> Union[List[str], str]:
+		"""Clean the response generated by the AI model.
+
+		Args:
+			response: The raw response string.
+			response_type: Optional; the type of response, e.g., 'tokens' or 'definition'.
+
+		Returns:
+			The cleaned response.
+		"""
 		# response = "Here is a list of tokens related to sexual abuse and harassment, separated by semicolons: violated; abused; assaulted; raped; molested; harasses; nonconsensual; harassment; victimized; stalking; groping; coerced; profaned; derided; violated my boundaries. "
 		# response = 'Acceptance and Commitment Therapy (ACT)'
 		if type == "tokens":
-			# print('0b', response)
 			# response = lexicon.constructs['sexual_abuse_harassment']['tokens']
 			# response = "suicide; kill; death; destroy; suffer; distress; desperate; ceased; expire; hurt; isolate; lonely; agonize; pain; anguish; grief; slit; bleed; hang; overdose; freeze to death; jump; fall; throttle; immolate; lie in traffic; hang oneself; jump off a bridge; jump in front of a train; drug overdose; hanging; drowning; suffocation; bullet wound; glass throat; carbon monoxide; running in front of a train; jumping from a building; steering into oncoming traffic; laying in the middle of the railroad tracks; tying a rope; waking up with a knife next to one's throat; planning; preparing; time; place; method; final; irreversible."
-			# if ';' in response:
 			response_list = response.split(";")
 
 			tokens = []
@@ -262,10 +310,11 @@ class Lexicon:
 				return response_list
 
 		elif type == "definition":
+			logger.warning("not implemented yet for definition")
 			# TODO
 			pass
 
-	def build(self, construct):
+	def build(self, construct: str) -> None:
 		"""
 		Union of tokens from each source. Remove tokens that were removed.
 		:return: None
@@ -305,31 +354,28 @@ class Lexicon:
 
 	def add(
 		self,
-		construct,
-		section = "tokens",
-		value = None,  # str, list or 'create'
-		domain = None, 
-		examples = None,
-		definition = None,
-		definition_references = None,
+		construct: str,
+		section: str = "tokens",
+		value: Optional[Union[str, List[str]]] = None,  # str, list or 'create'
+		domain: Optional[str] = None,
+		examples: Optional[List[str]] = None,
+		definition: Optional[str] = None,
+		definition_references: Optional[str] = None,
 		
 		# Only used if value == 'create'. if value == 'create', do API request with LiteLLM
-		prompt=None,  # str, None will create default prompt
-		source=None,  # str: model such as 'command-nightly", see litellm for models, or description "manually added by DML". Cohere 'command-nightly' models offer 5 free API calls per minute.
-		api_key=None,
-		temperature=0.1,
-		top_p=1,
-		seed=42,
-		timeout=120,
-		num_retries=2,
-		max_tokens=150, # If set to None (whatever the model decides), it make take a long time and generate a lot of phrases combining the words which may be redudant. default is 150
-		remove_parentheses_definition=True,  # TODO: remove double spaces
-		verbose=True, # True displays warnings
-	):
-		
-		# prompt_name=None,
-		# tokens=None,
-		# tokens_metadata=None,
+		prompt: Optional[str] = None, # str, None will create default prompt
+		source: Optional[str] = None,  # str: model such as 'command-nightly", see litellm for models, or description "manually added by DML". Cohere 'command-nightly' models offer 5 free API calls per minute.
+		api_key: Optional[str] = None,
+		temperature: float = 0.1,
+		top_p: float = 1,
+		seed: int = 42,
+		timeout: int = 120,
+		num_retries: int = 2,
+		max_tokens: Optional[int] = 150, # If set to None (whatever the model decides), it make take a long time and generate a lot of phrases combining the words which may be redudant. default is 150
+		remove_parentheses_definition: bool = True, # TODO: remove double spaces
+		verbose: bool = True, # True displays warnings
+			) -> None:
+		"""Add a construct or modify an existing one in the lexicon."""
 		self.construct_names.append(construct)
 		self.construct_names = list(set(self.construct_names))
 
@@ -397,12 +443,7 @@ class Lexicon:
 					time_elapsed = round(time_elapsed, 1)
 
 					tokens = self.clean_response(response, type="tokens")
-					# # add examples to tokens
-					# if isinstance(examples, list):
-					# 	for example in examples:
-					# 		if example not in tokens:
-					# 			tokens.insert(0, example)
-					# 	self.constructs[construct]["tokens"] = tokens
+
 					tokens = list(np.unique(tokens))
 					source_info = (
 						f"{source}, temperature-{temperature}, top_p-{top_p}, max_tokens-{max_tokens}, seed-{seed},"
@@ -436,13 +477,7 @@ class Lexicon:
 				)
 				return
 
-			# # merge all sources
-			# final_tokens = []
-			# for source, metadata in self.constructs[construct]['tokens_metadata'].items():
-			# 	final_tokens.extend(metadata['tokens'])
-			# final_tokens = list(np.unique(final_tokens))
-			# self.constructs[construct]['tokens'] = final_tokens
-			# if 'remove' in self.constructs[construct]['tokens_metadata'].keys():
+			
 
 			remove_tokens = self.constructs[construct]["remove"]
 			try_to_add_but_removed = [n for n in tokens if n in remove_tokens]
@@ -450,9 +485,9 @@ class Lexicon:
 				logger.warning(
 					f"These tokens are trying to be added to the construct '{construct}' but are listed in the 'remove'"
 					f" section of tokens_metadata: {try_to_add_but_removed}.\nThey will only be added to the"
-					" tokens_metadata not to the final tokens. You can override the previously removed tokens by"
+					f" tokens_metadata not to the final tokens. You can override the previously removed tokens by"
 					f" adding them to the 'override_remove': lexicon.add('{construct}', section='override_remove',"
-					" value=tokens_to_be_included). You can also delete any added or removed set of tokens from"
+					f" value=tokens_to_be_included). You can also delete any added or removed set of tokens from"
 					f" metadata: \ndel lexicon.constructs['{construct}']['tokens_metadata']['source']\nfollowed"
 					f" by:\nlexicon.build('{construct})\n"
 				)
@@ -468,7 +503,15 @@ class Lexicon:
 		# todo: compute percentage of final tokens that are from each source
 		# TODO: add tests for all possibilities
 
-	def remove(self, construct, source=None, remove_tokens=None, remove_substrings=None):
+
+	def remove(
+		self,
+		construct: str,
+		source: Optional[str] = None,
+		remove_tokens: Optional[List[str]] = None,
+		remove_substrings: Optional[List[str]] = None,
+		) -> None:
+		"""Remove tokens from the lexicon construct."""
 		# adds list of tokens to 'remove' section of 'tokens_metadata'.
 		ts = datetime.datetime.utcnow().strftime("%y-%m-%dT%H-%M-%S.%f")  # so you don't overwrite, and save timestamp
 		if isinstance(source, str):
@@ -510,10 +553,15 @@ class Lexicon:
 		return
 	
 
-	def to_pandas(self, add_ratings_columns=True, add_metadata_rows=True, order=None, tokens="tokens"):
-		# def to_pandas(self, add_ratings_columns=True, order=None, tokens = 'tokens'):
-		"""
-		TODO: still need to test
+	def to_pandas(
+		self,
+		add_ratings_columns: bool = True,
+		add_metadata_rows: bool = True,
+		order: Optional[List[str]] = None,
+		tokens: str = "tokens",
+	) -> pd.DataFrame:
+		"""Convert the lexicon to a pandas DataFrame.
+		
 		lexicon: dictionary with at least
 		{'construct 1': {'tokens': list of strings}
 		}
@@ -561,7 +609,9 @@ class Lexicon:
 
 		return lexicon_df
 
-	def to_dict(self):
+	def to_dict(self) -> Dict[str, List[str]]:
+		"""Convert the lexicon to a dictionary."""
+
 		lexicon_dict = {}
 		for c in self.constructs:
 			lexicon_dict[c] = self.constructs[c]["tokens"]
@@ -569,12 +619,13 @@ class Lexicon:
 	
 	def save(
 		self,
-		output_dir,
-		filename = None,
-		output_format=["pickle", "json", "json_metadata", "csv", "csv_ratings"],
-		order=None,
-		timestamp=True,
-	):
+		output_dir: str,
+		filename: Optional[str] = None,
+		output_format: Union[str, List[str]] = ("pickle", "json", "json_metadata", "csv", "csv_ratings"),
+		order: Optional[List[str]] = None,
+		timestamp: Union[bool, str] = True,
+	) -> None:
+		"""Save the lexicon to a file."""
 		os.makedirs(output_dir, exist_ok=True)
 		
 		if filename is None:
@@ -602,8 +653,7 @@ class Lexicon:
 
 		logger.info(f"Saved lexicon to {path}")
 
-	# TODO: do token lemmatization outside of extract in case they want to do extract multiple times on different docs using the same lexicon
-	# TODO: maybe implement this where I use regex to do the counting? https://github.com/kristopherkyle/SEANCE/blob/89213d9ab7e397a64db1fde91ef7f44494a19e35/SEANCE_1_2_0.py#L403
+	
 	# TODO: negation
 	def extract(
 		self,
@@ -637,6 +687,8 @@ class Lexicon:
 			save_dir (str, optional): Directory to save the extracted features (will save with relevant filenames and name of lexicon). Defaults to False.
 			save_append_to_filename (str, optional): Append this to filename. Defaults to None.
 			save_as (json, pickle, optional): Format of the saved dictionaries. Defaults to 'json'.
+		Example:
+			features, matches = lexicons.extract(docs,lexicons_d, normalize = False)
 		"""
 
 
@@ -890,11 +942,14 @@ class Lexicon:
 
 
 def generate_timestamp(format="%y-%m-%dT%H-%M-%S-%f"):
+	"""Generate a timestamp in a specific format."""
+
 	ts = datetime.datetime.utcnow().strftime(format)  # so you don't overwrite, and save timestamp
 	return ts
 
 
-def load_lexicon(name = None, path = None):
+def load_lexicon(name: Optional[str] = None, path: Optional[str] = None) -> "Lexicon":
+	"""Load a lexicon from a file."""
 	script_dir = os.path.dirname(__file__)  # Directory of the script being run
 
 	if name == 'srl_v1-0':
@@ -920,7 +975,8 @@ def load_lexicon(name = None, path = None):
 
 
 
-def dict_to_lexicon(lexicon_dict):
+def dict_to_lexicon(lexicon_dict: Dict[str, List[str]]) -> Lexicon:
+	"""Convert a dictionary to a Lexicon object."""
 
 	my_lexicon = Lexicon()         # Initialize lexicon
 
@@ -928,7 +984,8 @@ def dict_to_lexicon(lexicon_dict):
 		my_lexicon.add(c, section = 'tokens', value = lexicon_dict[c])
 	return my_lexicon
 
-def load_json_to_lexicon(json_path):
+def load_json_to_lexicon(json_path: str) -> Lexicon:
+	"""Load a lexicon from a JSON file."""
 	
 	# Final tokens:
 	with open(json_path, 'r') as f:
@@ -984,7 +1041,8 @@ def load_json_to_lexicon(json_path):
 	# srl.save('./../src/construct_tracker/data/lexicons/suicide_risk_lexicon_v1-0/', filename = 'suicide_risk_lexicon_validated')
 
 
-def warn_missing(dictionary, order, output_format=None):
+def warn_missing(dictionary: Dict[str, Any], order: List[str], output_format: Optional[str] = None) -> None:
+	"""Warn if there are missing constructs."""
 	missing = [n for n in dictionary if n not in order]
 	if len(missing) > 0:
 		logger.warning(
@@ -994,7 +1052,8 @@ def warn_missing(dictionary, order, output_format=None):
 	return
 
 
-def save_json(dictionary, path, with_metadata=True, order=None):
+def save_json(dictionary: Dict[str, Any], path: str, with_metadata: bool = True, order: Optional[List[str]] = None) -> None:
+	"""Save the lexicon as a JSON file."""
 	if order:
 		warn_missing(dictionary, order, output_format="json")
 		dictionary = {k: dictionary[k] for k in order}
@@ -1018,45 +1077,33 @@ def save_json(dictionary, path, with_metadata=True, order=None):
 	return
 
 
-# Look for code where I obtain window for tokens in a dataset (in word scores or create_lexicon ipynb)
 
-
-# Extract
-# ========================================================================
-
-#
-# import pandas as pd
-# import re
-# from collections import Counter
-# from .utils.count_words import word_count
-# # from text.utils.count_words import word_count
-# import numpy as np
-
-
-# return_matches = True
-# normalize = False
-# features, matches = lexicons.extract(docs,lexicons_d, normalize = normalize, return_matches=return_matches)
 
 # Check for false positives
 # =======================================
-import string
+
 
 
 def count_lexicons_in_doc(
-	doc, tokens=[], return_zero=[], return_matches=False, exact_match_n=4, exact_match_tokens=[], starts_with=None
-):
-	# TODO, perhaps return match and context (3 words before and after)
-	"""
+	doc: str,
+	tokens: Optional[List[str]] = None,
+	return_zero: Optional[List[str]] = None,
+	return_matches: bool = False,
+	exact_match_n: int = 4,
+	exact_match_tokens: Optional[List[str]] = None,
+) -> Union[int, Tuple[int, List[str]]]:
+	"""Count occurrences of lexicon tokens in a document.
 
 	Args:
-									doc:
-									tokens: lexicon tokens
-									return_zero:
-									normalize:
-									return_matches:
+		doc: The document text.
+		tokens: List of lexicon tokens.
+		return_zero: Optional; tokens to return zero for.
+		return_matches: Optional; whether to return matched tokens.
+		exact_match_n: Optional; maximum length of tokens for exact matches.
+		exact_match_tokens: Optional; list of tokens for exact matches.
 
 	Returns:
-
+		The count of matches and optionally the matched tokens.
 	"""
 
 	# remove punctuation except apostrophes because we need to search for things like "don't want to live"
@@ -1088,15 +1135,22 @@ def count_lexicons_in_doc(
 		return counter
 
 
-def remove_tokens_containing_token(tokens, except_exact_match=[]):
+def remove_tokens_containing_token(tokens: List[str], except_exact_match: Optional[List[str]] = None) -> List[str]:
+	"""Remove tokens that contain other tokens, except for exact matches.
+	
+
+	Args:
+		tokens: List of tokens to filter.
+		except_exact_match: Optional; list of tokens to exclude from filtering.
+
+	Returns:
+		The filtered list of tokens.
+	
+	Example:
+	remove_tokens_containing_token(['mourn', 'mourning', 'beat', 'beating'],  except_exact_match = ['beat'])
+	# Should keep beat and beating because beat is in except_exact_match, so it won't be redundant if you search for both.
 	"""
 
-	tokens = remove_tokens_containing_token(['mourn', 'mourning', 'beat', 'beating'],  except_exact_match = ['beat'])
-	Should keep beat and beating because beat is in except_exact_match, so it won't be redundant if you search for both.
-	:param tokens:
-	:param except_exact_match:
-	:return:
-	"""
 	if len(except_exact_match) > 0:
 		tokens_substrings = [n for n in tokens if n not in except_exact_match]
 		partial_matching_strings, matched_substrings = find_partial_matching_strings(tokens, tokens_substrings)
@@ -1110,7 +1164,7 @@ def remove_tokens_containing_token(tokens, except_exact_match=[]):
 
 
 
-import re
+
 
 
 def find_match(s, pat):
@@ -1180,31 +1234,46 @@ def add_remove_from_ratings_file(lexicon_ratings_df, my_lexicon,remove_below_or_
 
 
 
-from IPython.display import HTML, display
 
-def display_highlighted_documents(highlighted_documents):
+
+def display_highlighted_documents(highlighted_documents: List[str]) -> None:
+	"""Display highlighted documents with HTML formatting.
+
+	Args:
+		highlighted_documents: List of HTML formatted strings to display.
+	"""
+
 	for doc in highlighted_documents:
 		display(HTML(doc))
 
-def highlight_matches(documents, construct, matches_construct2doc, max_matches = 3, shuffle = True, random_seed = 42):
-
-	"""
-	Highlight the matches of a given construct in the provided documents.
+def highlight_matches(
+	documents: List[str],
+	construct: str,
+	matches_construct2doc: Dict[str, List[Tuple[int, List[str]]]],
+	max_matches: int = 3,
+	shuffle: bool = True,
+	random_seed: int = 42
+) -> List[str]:
+	"""Highlight the matches of a given construct in the provided documents.
+	This function takes a list of documents and a construct to search for matches in the documents. It uses the `matches_construct2doc` dictionary to retrieve the matches for the given construct. The function then iterates over the matches and highlights the matched words in the corresponding document by replacing them with HTML tags. The highlighted documents are returned as a list.
+	
 
 	Args:
-		documents (List[str]): The list of documents to search for matches.
-		construct (str): The construct to search for matches.
-		max_matches (int): The maximum number of matches to highlight, if available. Default = 3. 
-		matches_construct2doc (Dict[str, List[Tuple[int, List[str]]]]]): A dictionary mapping constructs to their corresponding matches in the documents.
+		documents: The list of documents to search for matches.
+		construct: The construct to search for matches.
+		matches_construct2doc: A dictionary mapping constructs to their corresponding matches in the documents.
+		max_matches: The maximum number of matches to highlight, if available. Default is 3.
+		shuffle: Whether to shuffle the documents before highlighting. Default is True.
+		random_seed: Seed for the random number generator used in shuffling. Default is 42.
 
 	Returns:
-		List[str]: The list of highlighted documents.
-
-	This function takes a list of documents and a construct to search for matches in the documents. It uses the `matches_construct2doc` dictionary to retrieve the matches for the given construct. The function then iterates over the matches and highlights the matched words in the corresponding document by replacing them with HTML tags. The highlighted documents are returned as a list.
-
+		A list of highlighted documents.
+	
 	Example:
 		construct = "Compassion"
+
 		N = 2
+		
 		documents = ['He is too competitive','Every time I speak with my cousin Bob, I have great moments of insight, clarity, and wisdom',"He meditates a lot, but he's not super smart"]
 		matches_construct2doc = {'Insight': [(0, []), (2, ['clarity', 'wisdom']), (0, [])],
  								'Mindfulness': [(0, []), (2, ['clarity', 'insight']), (1, ['meditate'])],

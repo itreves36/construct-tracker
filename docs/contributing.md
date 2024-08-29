@@ -104,7 +104,7 @@ def calculate_statistics(data: List[float]) -> Dict[str, float]:
 ````
 
 
-
+Instructions adapted from [senselab package](https://github.com/sensein/senselab/blob/main/CONTRIBUTING.md)
 
 # Releasing a new version
 
@@ -215,5 +215,7 @@ git push origin main --force
 ```
 
 
-## Adding images to readme
+
+
+
 

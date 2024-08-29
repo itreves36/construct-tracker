@@ -1,10 +1,6 @@
-import sys
-
 import nltk
 from nltk.corpus import stopwords
-
-sys.path.append("./../concept-tracker/concept_tracker/utils/")
-from tokenizer import spacy_tokenizer
+from .tokenizer import spacy_tokenizer
 
 nltk_language = {"en": "English", "es": "Spanish"}
 

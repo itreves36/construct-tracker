@@ -7,6 +7,10 @@ import os
 
 # Function to rename multiple files
 def rename_files(path_to_dir="./", old_str=".wav", new_str="_16khz.wav"):
+    """
+    Example:
+		rename_files(path_to_dir="./", old_str=".wav", new_str="_16khz.wav")
+    """
     for _count, filename in enumerate(os.listdir(path_to_dir)):
         src = f"{path_to_dir}/{filename}"  # foldername/filename, if .py file is outside folder
         new_filename = filename.replace(old_str, new_str)
@@ -16,5 +20,4 @@ def rename_files(path_to_dir="./", old_str=".wav", new_str="_16khz.wav"):
     return
 
 
-# rename files
-rename_files(path_to_dir="./", old_str=".wav", new_str="_16khz.wav")
+

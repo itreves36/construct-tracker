@@ -11,13 +11,30 @@ from sklearn.metrics import (
 	f1_score,
 	precision_recall_curve,
 	roc_auc_score,
+	classification_report,
+	precision_recall_curve
 )
+import warnings
+from collections import Counter
 
 
 
+def cm(y_true: np.ndarray, y_pred: np.ndarray, output_dir: str, output_filename: str, 
+	   classes: list = [0, 1], save: bool = True) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+	"""Generates and saves confusion matrices.
 
+	Args:
+		y_true (np.ndarray): True labels.
+		y_pred (np.ndarray): Predicted labels.
+		output_dir (str): Directory to save the output files.
+		output_filename (str): Filename for the output files.
+		classes (list, optional): List of class names. Defaults to [0, 1].
+		save (bool, optional): Whether to save the output files. Defaults to True.
 
-def cm(y_true, y_pred, output_dir, output_filename, classes=[0,1], save=True):
+	Returns:
+		tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Confusion matrix, normalized confusion matrix, and meaning matrix.
+	"""
+
 	try: classes = [n.replace("_", " ").capitalize() for n in classes]
 	except: pass
 	cm = confusion_matrix(y_true, y_pred, normalize=None)
@@ -40,15 +57,27 @@ def cm(y_true, y_pred, output_dir, output_filename, classes=[0,1], save=True):
 
 	return cm_df_meaning, cm_df, cm_df_norm
 
-from sklearn.metrics import classification_report
-from collections import Counter
 
-from sklearn.metrics import precision_recall_curve
 
-def plot_roc_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_format = 'png', dpi=300, save=True, size = 12):
+def plot_roc_auc_curve(y_true: np.ndarray, y_proba_1: np.ndarray, output_dir: str, 
+					   output_filename: str, fig_format: str = 'png', dpi: int = 300, 
+					   save: bool = True, size: int = 12) -> tuple[np.ndarray, np.ndarray, float]:
+	"""Plots the ROC AUC curve.
 
+	Args:
+		y_true (np.ndarray): True labels.
+		y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+		output_dir (str): Directory to save the output files.
+		output_filename (str): Filename for the output files.
+		fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
+		dpi (int, optional): DPI of the saved figure. Defaults to 300.
+		save (bool, optional): Whether to save the figure. Defaults to True.
+		size (int, optional): Font size for the plot. Defaults to 12.
+
+	Returns:
+		tuple[np.ndarray, np.ndarray, float]: False positive rate, true positive rate, and ROC AUC score.
+	"""
 	# calculate the fpr and tpr for all thresholds of the classification
-	
 	# Softmax. not really making sense.
 	# https://discuss.pytorch.org/t/logits-vs-log-softmax/95979
 
@@ -75,7 +104,25 @@ def plot_roc_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_forma
 	return fpr, tpr, roc_auc
 
 
-def plot_pr_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_format = 'png', dpi=300, save=True, size = 12):
+def plot_pr_auc_curve(y_true: np.ndarray, y_proba_1: np.ndarray, output_dir: str, 
+					  output_filename: str, fig_format: str = 'png', dpi: int = 300, 
+					  save: bool = True, size: int = 12) -> tuple[np.ndarray, np.ndarray, float]:
+	"""Plots the Precision-Recall AUC curve.
+
+	Args:
+		y_true (np.ndarray): True labels.
+		y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+		output_dir (str): Directory to save the output files.
+		output_filename (str): Filename for the output files.
+		fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
+		dpi (int, optional): DPI of the saved figure. Defaults to 300.
+		save (bool, optional): Whether to save the figure. Defaults to True.
+		size (int, optional): Font size for the plot. Defaults to 12.
+
+	Returns:
+		tuple[np.ndarray, np.ndarray, float]: Precision, recall, and PR AUC score.
+	"""
+	# def plot_pr_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_format = 'png', dpi=300, save=True, size = 12):
 	plt.clf()
 	sns.set(rc={'figure.figsize':(6,6)})
 	sns.set_style("white")
@@ -106,33 +153,62 @@ def plot_pr_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_format
 
 
 
-def calculate_npv(tn, fn):
-    # Check for a case where the denominator would be zero
-    if tn + fn == 0:
-        return "Undefined (TN + FN is 0, leading to division by zero)"
-    npv = tn / (tn + fn)
-    return npv
+def calculate_npv(tn: int, fn: int) -> float:
+	"""Calculates the Negative Predictive Value (NPV).
 
-# Example usage:
-tn = 50  # Number of true negatives
-fn = 10  # Number of false negatives
+	Args:
+		tn (int): True negatives.
+		fn (int): False negatives.
 
-npv = calculate_npv(tn, fn)
-# print(f"Negative Predictive Value (NPV): {npv}")
+	Returns:
+		float: Negative Predictive Value (NPV).
+	
+	Example:
+		tn = 50  # Number of true negatives
+		fn = 10  # Number of false negatives
+
+		npv = calculate_npv(tn, fn)
+		print(f"Negative Predictive Value (NPV): {npv}")
+	"""
+	# Check for a case where the denominator would be zero
+	if tn + fn == 0:
+		return "Undefined (TN + FN is 0, leading to division by zero)"
+	npv = tn / (tn + fn)
+	return npv
+
+
 
 def custom_classification_report(
-	y_true,
-	y_pred,
-	y_proba_1,
-	output_dir,
-	output_filename=None,
-	best_params=None,
-	feature_vector=None,
-	model_name=None,
-	classes = [0,1],
-	amount_of_clauses = 'all',
-	save = True,
-):
+	y_true: np.ndarray,
+	y_pred: np.ndarray,
+	y_proba_1: np.ndarray,
+	output_dir: str,
+	output_filename: str = None,
+	best_params: dict = None,
+	feature_vector: list = None,
+	model_name: str = None,
+	classes: list = [0, 1],
+	amount_of_clauses: str = 'all',
+	save: bool = True,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+	"""Generates a custom classification report with various metrics.
+
+	Args:
+		y_true (np.ndarray): True labels.
+		y_pred (np.ndarray): Predicted labels.
+		y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+		output_dir (str): Directory to save the output files.
+		output_filename (str, optional): Filename for the output files. Defaults to None.
+		best_params (dict, optional): Best model parameters. Defaults to None.
+		feature_vector (list, optional): Feature vector. Defaults to None.
+		model_name (str, optional): Name of the model. Defaults to None.
+		classes (list, optional): List of class names. Defaults to [0, 1].
+		amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
+		save (bool, optional): Whether to save the output files. Defaults to True.
+
+	Returns:
+		tuple[pd.DataFrame, pd.DataFrame]: Custom classification report and sklearn classification report.
+	"""
 	if len(np.unique(y_true)) == 1:
 		sensitivity = metrics.recall_score(y_true, y_pred)
 		# Calculate TP and FN
@@ -302,16 +378,15 @@ def custom_classification_report(
 
 from sklearn.metrics import roc_curve
 
-def find_optimal_threshold(y_true, y_proba_1):
-	"""
-	Find the optimal threshold for binary classification based on Youden's Index.
-	
-	Parameters:
-	y_true (array-like): True binary labels.
-	y_pred (array-like): Target scores, probabilities of the positive class.
-	
+def find_optimal_threshold(y_true: np.ndarray, y_proba_1: np.ndarray) -> float:
+	"""Finds the optimal threshold for binary classification based on Youden's Index.
+
+	Args:
+		y_true (np.ndarray): True binary labels.
+		y_proba_1 (np.ndarray): Target scores, probabilities of the positive class.
+
 	Returns:
-	float: Optimal threshold value.
+		float: Optimal threshold value.
 	"""
 	# Compute ROC curve
 	fpr, tpr, thresholds = roc_curve(y_true, y_proba_1)
@@ -325,7 +400,39 @@ def find_optimal_threshold(y_true, y_proba_1):
 	
 	return optimal_threshold
 
-def save_classification_performance(y_test, y_pred, y_proba_1, output_dir_i, output_filename=None,feature_vector=None, model_name=None,best_params = None, classes = [0,1], amount_of_clauses = 'all', save_confusion_matrix = True, save_output=True):
+def save_classification_performance(
+	y_test: np.ndarray,
+	y_pred: np.ndarray,
+	y_proba_1: np.ndarray,
+	output_dir_i: str,
+	output_filename: str = None,
+	feature_vector: list = None,
+	model_name: str = None,
+	best_params: dict = None,
+	classes: list = [0, 1],
+	amount_of_clauses: str = 'all',
+	save_confusion_matrix: bool = True,
+	save_output: bool = True
+) -> tuple:
+	"""Saves classification performance results and generates reports.
+
+	Args:
+		y_test (np.ndarray): Test labels.
+		y_pred (np.ndarray): Predicted labels.
+		y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+		output_dir_i (str): Directory to save the output files.
+		output_filename (str, optional): Filename for the output files. Defaults to None.
+		feature_vector (list, optional): Feature vector. Defaults to None.
+		model_name (str, optional): Name of the model. Defaults to None.
+		best_params (dict, optional): Best model parameters. Defaults to None.
+		classes (list, optional): List of class names. Defaults to [0, 1].
+		amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
+		save_confusion_matrix (bool, optional): Whether to save the confusion matrix. Defaults to True.
+		save_output (bool, optional): Whether to save the output files. Defaults to True.
+
+	Returns:
+		tuple: Custom classification report, sklearn classification report, confusion matrixes, and predictions.
+	"""
 	if output_filename is None:
 		output_filename = f'{feature_vector}_{model_name}_{classes[1]}.csv'
 
@@ -352,25 +459,43 @@ def save_classification_performance(y_test, y_pred, y_proba_1, output_dir_i, out
 												
 
 def regression_report(
-	y_test,
-	y_pred,
-	y_train=None,
-	gridsearch=None,
-	best_params=None,
-	feature_vector=None,
-	model_name=None,
-	metrics_to_report="all",
-	plot=True,
-	save_fig_path=None,
-	n="all",
-	round_to=2,
-	figsize=(4, 8),
-	ordinal_ticks=True,
-):
+	y_test: np.ndarray,
+	y_pred: np.ndarray,
+	y_train: np.ndarray = None,
+	gridsearch: dict = None,
+	best_params: dict = None,
+	feature_vector: list = None,
+	model_name: str = None,
+	metrics_to_report: str = "all",
+	plot: bool = True,
+	save_fig_path: str = None,
+	n: str = "all",
+	round_to: int = 2,
+	figsize: tuple = (4, 8),
+	ordinal_ticks: bool = True
+) -> pd.DataFrame:
+	"""Generates a regression report including various metrics and plots.
+
+	Args:
+		y_test (np.ndarray): Test labels.
+		y_pred (np.ndarray): Predicted labels.
+		y_train (np.ndarray, optional): Training labels. Defaults to None.
+		gridsearch (dict, optional): Grid search results. Defaults to None.
+		best_params (dict, optional): Best model parameters. Defaults to None.
+		feature_vector (list, optional): Feature vector. Defaults to None.
+		model_name (str, optional): Name of the model. Defaults to None.
+		metrics_to_report (str, list, optional): Metrics to report. Defaults to "all". options: {'all', ['MAE','RMSE','rho', 'Best parameters']}
+		plot (bool, optional): Whether to generate plots. Defaults to True.
+		save_fig_path (str, optional): Path to save the figure. Defaults to None.
+		n (str, optional): Sample size. Defaults to "all".
+		round_to (int, optional): Decimal places for rounding. Defaults to 2.
+		figsize (tuple, optional): Figure size. Defaults to (4, 8).
+		ordinal_ticks (bool, optional): Whether to use ordinal ticks. Defaults to True.
+
+	Returns:
+		pd.DataFrame: DataFrame with regression metrics.
 	"""
-	metrics = {'all', ['MAE','RMSE','rho', 'Best parameters']
-	}
-	"""
+	
 
 	# Metrics
 	# https://scikit-learn.org/stable/modules/classes.html#module-sklearn.metrics
@@ -451,117 +576,5 @@ def regression_report(
 	# plt.show()
 	return results
 
-
-def generate_feature_importance_df(
-	trained_model,
-	model_name,
-	feature_names,
-	xgboost_method="weight",
-	model_name_in_pipeline="estimator",
-	lgbm_method="split",
-):
-	"""
-	Function to generate feature importance table for methods that use .coef_ from sklearn
-	as well as xgboost models.
-	both using sklearn pipelines that go into GridsearchCV, where we need to
-	first access the best_estimator to access, for example, the coefficients.
-
-	trained_model: sklearn type model object fit to data
-	model_name: str among the ones that appear below
-	xgboost_method: str, there are a few options: https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.Booster.get_score
-	"""
-
-	#  Feature importance using coefficients for linear models and gini
-	if model_name in ["SGDRegressor", "Ridge", "Lasso", "LogisticRegression", "LinearSVC"]:
-		
-		try:
-			coefs = list(trained_model.named_steps["model"].coef_)
-		except:
-			coefs = list(
-				trained_model.best_estimator_.named_steps[model_name_in_pipeline].coef_
-			)  # Obtain coefficients from GridSearch
-		try:
-			coefs = pd.DataFrame(coefs, index=["Coef."], columns=feature_names).T  # make DF
-		except:
-			coefs = pd.DataFrame(coefs, index=feature_names, columns=["Coef."])  # make DF
-		coefs["Abs. Coef."] = coefs[
-			"Coef."
-		].abs()  # add column with absolute values to sort by, both positive and negative values are important.
-		coefs = coefs.sort_values(
-			"Abs. Coef.", ascending=False
-		).reset_index()  # sort by abs value and reset index to add a feature name column
-		coefs = coefs.drop(["Abs. Coef."], axis=1)  # drop abs value, it's job is done
-		coefs.index += 1  # Importance for publication, start index with 1 , as in 1st, 2nd, 3rd
-		coefs = coefs.reset_index()  # turn index into column
-		coefs.columns = ["Importance", "Feature", "Coef."]  # Clean column names
-		feature_importance = coefs.copy()
-		return feature_importance
-
-	elif model_name in ["LGBMRegressor", "LGBMClassifier"]:
-		try:
-			importance_split = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(
-				importance_type="split"
-			)
-			importance_gain = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(
-				importance_type="gain"
-			)
-			# feature_names = trained_model.named_steps[model_name_in_pipeline].booster_.feature_name()
-		except:
-			importance_split = trained_model.best_estimator_.named_steps[
-				model_name_in_pipeline
-			].booster_.feature_importance(importance_type="split")
-			importance_gain = trained_model.best_estimator_.named_steps[
-				model_name_in_pipeline
-			].booster_.feature_importance(importance_type="gain")
-			# feature_names = trained_model.best_estimator_.named_steps[model_name_in_pipeline].booster_.feature_name()
-
-		feature_importance = pd.DataFrame(
-			{"feature": feature_names, "split": importance_split, "gain": importance_gain}
-		)
-
-		# Sort by gain
-		feature_importance = feature_importance.sort_values("gain", ascending=False)
-		return feature_importance
-
-	elif model_name in ["XGBRegressor", "XGBClassifier"]:
-		# WARNING it will not return values for features that weren't used: if feature 3 wasn't used there will not be a f3 in the results
-		try:
-			feature_importance = (
-				trained_model.named_steps[model_name_in_pipeline]
-				.get_booster()
-				.get_score(importance_type=xgboost_method)
-			)
-		except:
-			feature_importance = (
-				trained_model.best_estimator_.named_steps[model_name_in_pipeline]
-				.get_booster()
-				.get_score(importance_type=xgboost_method)
-			)
-		feature_importance_keys = list(feature_importance.keys())
-		feature_importance_values = list(feature_importance.values())
-		feature_importance = pd.DataFrame(feature_importance_values, index=feature_importance_keys)  # make DF
-		feature_importance = feature_importance.sort_values(0, ascending=False)
-		feature_importance = feature_importance.reset_index()
-
-		feature_importance.index += 1
-		feature_importance = feature_importance.reset_index()
-		feature_importance
-
-		feature_importance.columns = ["Importance", "Feature", xgboost_method.capitalize()]
-
-		feature_name_mapping = {}
-		for i, feature_name_i in enumerate(feature_names):
-			feature_name_mapping[f"f{i}"] = feature_name_i
-
-		# Or manually edit here:
-		# feature_name_mapping = {'f0': 'Unnamed: 0', 'f1': 'Adult Mortality', 'f2': 'infant deaths', 'f3': 'percentage expenditure', 'f4': 'Hepatitis B', 'f5': 'Measles ', 'f6': ' BMI ', 'f7': 'under-five deaths ', 'f8': 'Polio', 'f9': 'Diphtheria ', 'f10': ' HIV/AIDS', 'f11': ' thinness  1-19 years', 'f12': ' thinness 5-9 years', 'f13': 'Developing'}
-
-		feature_importance["Feature"] = feature_importance["Feature"].map(feature_name_mapping)
-		# Todo: add feature_importances_ for sklearn tree based models
-		# https://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html#feature-importance-based-on-mean-decrease-in-impurity
-
-		
-		return feature_importance
-	else:
-		warnings.warn(f"model not specificied for feature importance: {model_name}")
-		return None
+# This was moved to feature_importance.py
+# def generate_feature_importance_df(

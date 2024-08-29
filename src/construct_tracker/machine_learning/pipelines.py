@@ -1,18 +1,34 @@
-
+import warnings
+from typing import Any, Dict, List, Optional, Union
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression, Ridge
-from lightgbm import LGBMClassifier, LGBMRegressor
-from xgboost import XGBClassifier, XGBRegressor
 from sklearn.impute import SimpleImputer
-import warnings
+from itertools import product
 
+def get_pipelines(
+	feature_vector: str,
+	model_name: str = "Ridge",
+	tfidf_vectorizer: Optional[bool] = None,
+	random_state: int = 123
+) -> Pipeline:
+	"""Create a machine learning pipeline based on the specified model and feature vector.
 
+	Args:
+		feature_vector: Type of feature vector ('tfidf' or other).
+		model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
+		tfidf_vectorizer: Whether to use TFIDF vectorizer.
+		random_state: Random state for reproducibility.
 
-def get_pipelines(feature_vector, model_name = 'Ridge', tfidf_vectorizer = None,random_state = 123):
+	Returns:
+		A configured machine learning pipeline.
+	"""
 	
-
+	if 'LGBM' in model_name:
+		from lightgbm import LGBMClassifier, LGBMRegressor
+	elif 'XGBC' in model_name:
+		from xgboost import XGBClassifier, XGBRegressor
 	model = globals()[model_name]()
 	model.set_params(random_state=random_state)
 	
@@ -53,7 +69,31 @@ def get_pipelines(feature_vector, model_name = 'Ridge', tfidf_vectorizer = None,
 
 
 
-def get_params(feature_vector,model_name = 'Ridge', toy=False, ridge_alphas = [0.001, 0.01, 0.1, 1, 10, 100, 1000], ridge_alphas_toy = [0.1, 10]):
+def get_params(
+	feature_vector: str,
+	model_name: str = "Ridge",
+	toy: bool = False,
+	ridge_alphas: Optional[List[float]] = None,
+	ridge_alphas_toy: Optional[List[float]] = None
+) -> Dict[str, Any]:
+	"""Generate a parameter grid for model hyperparameter tuning.
+
+	Args:
+		feature_vector: Type of feature vector ('tfidf' or other).
+		model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
+		toy: Whether to use a toy version of the parameter grid.
+		ridge_alphas: List of alpha values for Ridge regularization.
+		ridge_alphas_toy: List of alpha values for toy version.
+
+	Returns:
+		A dictionary containing the parameter grid.
+	"""
+	if ridge_alphas is None:
+		ridge_alphas = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+	if ridge_alphas_toy is None:
+		ridge_alphas_toy = [0.1, 10]
+
+
 	if model_name in ['LogisticRegression']:
 		if feature_vector == 'tfidf':
 			if toy:
@@ -104,6 +144,7 @@ def get_params(feature_vector,model_name = 'Ridge', toy=False, ridge_alphas = [0
 	
 
 	elif model_name in [ 'LGBMRegressor', 'LGBMClassifier']:
+		
 		if toy:
 			warnings.warn('WARNING, running toy version')
 			param_grid = {
@@ -135,6 +176,7 @@ def get_params(feature_vector,model_name = 'Ridge', toy=False, ridge_alphas = [0
 
 	
 	elif model_name in [ 'XGBRegressor', 'XGBClassifier']:
+		
 		if toy:
 			warnings.warn('WARNING, running toy version')
 			param_grid = {
@@ -166,17 +208,26 @@ def get_params(feature_vector,model_name = 'Ridge', toy=False, ridge_alphas = [0
 
 
 		
-def get_combinations(parameters):
-	"""
-	parameters =   {'model__colsample_bytree': [1, 0.5, 0.1],
+def get_combinations(parameters: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
+	"""Generate all combinations of parameter sets.
+
+	Args:
+		parameters: A dictionary of model parameters and their corresponding values.
+
+	Returns:
+		A list of dictionaries, each representing a unique combination of parameters.
+	
+	Example:
+		parameters =   {'model__colsample_bytree': [1, 0.5, 0.1],
 				'model__max_depth': [-1,10,20], #-1 is the default and means No max depth
 				'model__min_child_weight': [0.01, 0.001, 0.0001],
 				'model__min_child_samples': [10, 20,40], #alias: min_data_in_leaf
 			   }
 		
-	from itertools import product
-	combinations = list(product(*parameters.values()))
+	
 	"""
+	
+	combinations = list(product(*parameters.values()))
 	
 	parameter_set_combinations = []
 	for combination in combinations:

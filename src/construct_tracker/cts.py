@@ -21,16 +21,17 @@ import concurrent.futures
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
 from sentence_transformers import SentenceTransformer
-from construct_tracker.utils.tokenizer import spacy_tokenizer
-import numpy as np
+
 from IPython.display import HTML, display
 import logging
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
 
 
+
 # Local
-from construct_tracker import lexicon
+from .utils.tokenizer import spacy_tokenizer
+from . import lexicon
 from .utils.logger_config import setup_logger
 
 # Set up the logger

@@ -1,162 +1,137 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import warnings
+from typing import Optional, Dict, Union, List
 
 def generate_feature_importance_df(
-    trained_model,
-    model_name,
-    feature_names,
-    xgboost_method="weight",
-    model_name_in_pipeline="estimator",
-    lgbm_method="split",
-):
+    trained_model: object,
+    model_name: str,
+    feature_names: List[str],
+    xgboost_method: str = "weight",
+    model_name_in_pipeline: str = "estimator",
+    lgbm_method: str = "split"
+) -> Optional[pd.DataFrame]:
     """
-    Function to generate feature importance table for methods that use .coef_ from sklearn
-    as well as xgboost models.
-    both using sklearn pipelines that go into GridsearchCV, where we need to
-    first access the best_estimator to access, for example, the coefficients.
+    Generates a DataFrame showing feature importance from various model types.
 
-    trained_model: sklearn type model object fit to data
-    model_name: str among the ones that appear below
-    xgboost_method: str, there are a few options: https://xgboost.readthedocs.io/en/stable/python/python_api.html#xgboost.Booster.get_score
+    Args:
+        trained_model (object): A trained model object, either a standalone sklearn model or part of a scikit-learn pipeline.
+        model_name (str): The name of the model (e.g., 'SGDRegressor', 'LGBMClassifier').
+        feature_names (List[str]): List of feature names.
+        xgboost_method (str, optional): Method for XGBoost feature importance. Default is "weight".
+        model_name_in_pipeline (str, optional): Name of the model step in the pipeline. Default is "estimator".
+        lgbm_method (str, optional): Method for LGBM feature importance. Default is "split".
+
+    Returns:
+        Optional[pd.DataFrame]: A DataFrame containing feature importance information, or None if the model type is not recognized.
     """
-
-    #  Feature importance using coefficients for linear models and gini
+    # Feature importance using coefficients for linear models and gini
     if model_name in ["SGDRegressor", "Ridge", "Lasso", "LogisticRegression", "LinearSVC"]:
         try:
             coefs = list(trained_model.named_steps["model"].coef_)
-        except:
-            coefs = list(
-                trained_model.best_estimator_.named_steps[model_name_in_pipeline].coef_
-            )  # Obtain coefficients from GridSearch
+        except AttributeError:
+            coefs = list(trained_model.best_estimator_.named_steps[model_name_in_pipeline].coef_)
+        
         try:
-            coefs = pd.DataFrame(coefs, index=["Coef."], columns=feature_names).T  # make DF
-        except:
-            coefs = pd.DataFrame(coefs, index=feature_names, columns=["Coef."])  # make DF
-        coefs["Abs. Coef."] = coefs[
-            "Coef."
-        ].abs()  # add column with absolute values to sort by, both positive and negative values are important.
-        coefs = coefs.sort_values(
-            "Abs. Coef.", ascending=False
-        ).reset_index()  # sort by abs value and reset index to add a feature name column
-        coefs = coefs.drop(["Abs. Coef."], axis=1)  # drop abs value, it's job is done
-        coefs.index += 1  # Importance for publication, start index with 1 , as in 1st, 2nd, 3rd
-        coefs = coefs.reset_index()  # turn index into column
-        coefs.columns = ["Importance", "Feature", "Coef."]  # Clean column names
-        feature_importance = coefs.copy()
-        return feature_importance
+            coefs_df = pd.DataFrame(coefs, index=["Coef."], columns=feature_names).T
+        except ValueError:
+            coefs_df = pd.DataFrame(coefs, index=feature_names, columns=["Coef."])
+        
+        coefs_df["Abs. Coef."] = coefs_df["Coef."].abs()
+        coefs_df = coefs_df.sort_values("Abs. Coef.", ascending=False).reset_index()
+        coefs_df = coefs_df.drop(["Abs. Coef."], axis=1)
+        coefs_df.index += 1
+        coefs_df = coefs_df.reset_index()
+        coefs_df.columns = ["Importance", "Feature", "Coef."]
+        
+        return coefs_df
 
     elif model_name in ["LGBMRegressor", "LGBMClassifier"]:
         try:
-            importance_split = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(
-                importance_type="split"
-            )
-            importance_gain = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(
-                importance_type="gain"
-            )
-        # feature_names = trained_model.named_steps[model_name_in_pipeline].booster_.feature_name()
-        except:
-            importance_split = trained_model.best_estimator_.named_steps[
-                model_name_in_pipeline
-            ].booster_.feature_importance(importance_type="split")
-            importance_gain = trained_model.best_estimator_.named_steps[
-                model_name_in_pipeline
-            ].booster_.feature_importance(importance_type="gain")
-        # feature_names = trained_model.best_estimator_.named_steps[model_name_in_pipeline].booster_.feature_name()
-
-        feature_importance = pd.DataFrame(
+            importance_split = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(importance_type="split")
+            importance_gain = trained_model.named_steps[model_name_in_pipeline].booster_.feature_importance(importance_type="gain")
+        except AttributeError:
+            importance_split = trained_model.best_estimator_.named_steps[model_name_in_pipeline].booster_.feature_importance(importance_type="split")
+            importance_gain = trained_model.best_estimator_.named_steps[model_name_in_pipeline].booster_.feature_importance(importance_type="gain")
+        
+        feature_importance_df = pd.DataFrame(
             {"feature": feature_names, "split": importance_split, "gain": importance_gain}
         )
-
-        # Sort by gain
-        feature_importance = feature_importance.sort_values("gain", ascending=False)
-        return feature_importance
+        feature_importance_df = feature_importance_df.sort_values("gain", ascending=False)
+        return feature_importance_df
 
     elif model_name in ["XGBRegressor", "XGBClassifier"]:
-        # WARNING it will not return values for features that weren't used: if feature 3 wasn't used there will not be a f3 in the results
         try:
-            feature_importance = (
-                trained_model.named_steps[model_name_in_pipeline]
-                .get_booster()
-                .get_score(importance_type=xgboost_method)
-            )
-        except:
-            feature_importance = (
-                trained_model.best_estimator_.named_steps[model_name_in_pipeline]
-                .get_booster()
-                .get_score(importance_type=xgboost_method)
-            )
-        feature_importance_keys = list(feature_importance.keys())
-        feature_importance_values = list(feature_importance.values())
-        feature_importance = pd.DataFrame(feature_importance_values, index=feature_importance_keys)  # make DF
-        feature_importance = feature_importance.sort_values(0, ascending=False)
-        feature_importance = feature_importance.reset_index()
+            feature_importance = trained_model.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method)
+        except AttributeError:
+            feature_importance = trained_model.best_estimator_.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method)
+        
+        feature_importance_df = pd.DataFrame(
+            list(feature_importance.values()), 
+            index=list(feature_importance.keys())
+        )
+        feature_importance_df = feature_importance_df.sort_values(0, ascending=False).reset_index()
+        feature_importance_df.index += 1
+        feature_importance_df = feature_importance_df.reset_index()
+        feature_importance_df.columns = ["Importance", "Feature", xgboost_method.capitalize()]
+        
+        feature_name_mapping = {f"f{i}": name for i, name in enumerate(feature_names)}
+        feature_importance_df["Feature"] = feature_importance_df["Feature"].map(feature_name_mapping)
+        
+        return feature_importance_df
 
-        feature_importance.index += 1
-        feature_importance = feature_importance.reset_index()
-        feature_importance
-
-        feature_importance.columns = ["Importance", "Feature", xgboost_method.capitalize()]
-
-        feature_name_mapping = {}
-        for i, feature_name_i in enumerate(feature_names):
-            feature_name_mapping[f"f{i}"] = feature_name_i
-
-        # Or manually edit here:
-        # feature_name_mapping = {'f0': 'Unnamed: 0', 'f1': 'Adult Mortality', 'f2': 'infant deaths', 'f3': 'percentage expenditure', 'f4': 'Hepatitis B', 'f5': 'Measles ', 'f6': ' BMI ', 'f7': 'under-five deaths ', 'f8': 'Polio', 'f9': 'Diphtheria ', 'f10': ' HIV/AIDS', 'f11': ' thinness  1-19 years', 'f12': ' thinness 5-9 years', 'f13': 'Developing'}
-
-        feature_importance["Feature"] = feature_importance["Feature"].map(feature_name_mapping)
-        # Todo: add feature_importances_ for sklearn tree based models
-        # https://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html#feature-importance-based-on-mean-decrease-in-impurity
-
-        return feature_importance
     else:
-        warnings.warn(f"model not specificied for feature importance: {model_name}")
+        warnings.warn(f"Model not specified for feature importance: {model_name}")
         return None
 
 
+def tfidf_feature_importances(
+    pipe: object,
+    top_k: int = 100,
+    savefig_path: str = '',
+    model_name_in_pipeline: str = 'model',
+    xgboost_method: str = 'weight'
+) -> pd.DataFrame:
+    """
+    Plots and returns feature importances for a TF-IDF pipeline model.
 
+    Args:
+        pipe ('Pipeline'): A scikit-learn pipeline object with a TF-IDF vectorizer and a model.
+        top_k (int, optional): Number of top features to display. Default is 100.
+        savefig_path (str, optional): Path to save the plot. Default is an empty string, which means no plot is saved.
+        model_name_in_pipeline (str, optional): Name of the model step in the pipeline. Default is "model".
+        xgboost_method (str, optional): Method for XGBoost feature importance. Default is "weight".
 
-
-
-def tfidf_feature_importances(pipe, top_k = 100, savefig_path = '', model_name_in_pipeline = 'model', xgboost_method = 'weight' ):
-    # # Using sklearn pipeline:
+    Returns:
+        pd.DataFrame: A DataFrame containing feature importance values and their absolute values.
+    """
     feature_names = pipe.named_steps["vectorizer"].get_feature_names_out()
     
-    try: coefs = pipe.named_steps["model"].coef_.flatten() # Get the coefficients of each feature
-    except: 
-        try: coefs = list(pipe.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method )) # pipeline directly
-        except:
-            # gridsearchcv(pipeline)
-            coefs = pipe.best_estimator_.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method )
+    try:
+        coefs = pipe.named_steps["model"].coef_.flatten()
+    except AttributeError:
+        try:
+            coefs = list(pipe.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method))
+        except AttributeError:
+            coefs = pipe.best_estimator_.named_steps[model_name_in_pipeline].get_booster().get_score(importance_type=xgboost_method)
     
-    # Without sklearn pipeline
-    # feature_names = vectorizer.get_feature_names_out()
-    # print(len(feature_names ))
-    # coefs = pipeline.coef_.flatten() # Get the coefficients of each feature
-    
-    # Visualize feature importances
-    # Sort features by absolute value
     df = pd.DataFrame(zip(feature_names, coefs), columns=["feature", "value"])
     df["abs_value"] = df["value"].apply(lambda x: abs(x))
     df["colors"] = df["value"].apply(lambda x: "orange" if x > 0 else "dodgerblue")
-    df = df.sort_values("abs_value", ascending=False) # sort by absolute coefficient value
+    df = df.sort_values("abs_value", ascending=False)
     
-    fig, ax = plt.subplots(1, 1, figsize=(3.5, 6))
-    plt.style.use('default')  # Example of applying the 'ggplot' style
-    ax = sns.barplot(x="value",
-                y="feature",
-                data=df.head(top_k),
-                hue="colors")
+    fig, ax = plt.subplots(figsize=(3.5, 6))
+    plt.style.use('default')
+    sns.barplot(x="value", y="feature", data=df.head(top_k), hue="colors", ax=ax)
     ax.legend_.remove()
     ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=8)
     ax.set_title(f"Top {top_k} Features", fontsize=14)
-    ax.set_xlabel("Coef", fontsize=12) # coeficient from linear model
+    ax.set_xlabel("Coef", fontsize=12)
     ax.set_ylabel("Feature Name", fontsize=12)
     
     plt.tight_layout()
-    plt.savefig(savefig_path+'.png', dpi=300)
+    plt.savefig(f'{savefig_path}.png', dpi=300)
     plt.show()
+    
     return df
-
-	
