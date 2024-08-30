@@ -35,7 +35,7 @@ def spacy_lemmatizer(docs, language="en"):
 
 
 # def textblob_lemmatizer(docs):
-	
+
 #     for doc in docs:
 #         doc = TextBlob(doc)
 
@@ -43,13 +43,13 @@ def spacy_lemmatizer(docs, language="en"):
 #         docs.append(doc_lemmatized)
 #     return docs
 
-    # See also:
-    # w.singularize()
+# See also:
+# w.singularize()
 
-    # spellchecker
-    # doc = doc.correct() # don't like it: changed Dr>Or 3yrs>eyes
-    # w = Word('Dr')
-    # w.spellcheck() #This will return the confidence score for each suggestion. Could become interactive.
+# spellchecker
+# doc = doc.correct() # don't like it: changed Dr>Or 3yrs>eyes
+# w = Word('Dr')
+# w.spellcheck() #This will return the confidence score for each suggestion. Could become interactive.
 
 
 """

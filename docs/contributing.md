@@ -12,7 +12,7 @@ Please use the following workflow when contributing:
   - ```pip install poetry==1.7.1```
   - ```pip install versioneer```
 1. **Create an issue**: Use GitHub to create an issue, assign it to yourself (and any collaborators)
-2. **Create a branch**: Use GitHub's "Create a branch" button from the issue page to generate a branch associated with the issue. 
+2. **Create a branch**: Use GitHub's "Create a branch" button from the issue page to generate a branch associated with the issue.
 3. **Clone the repo locally**:
    ```git clone https://github.com/danielmlow/construct-tracker.git```
 4. **Checkout locally**:
@@ -34,14 +34,24 @@ Please use the following workflow when contributing:
       ```poetry run pdoc src/construct_tracker -t docs_style/pdoc-theme --docformat google```.
       This command uses ```pdoc``` to generate the documentation for you and make it accessible through a web interface.
     - If you installed the pre-commit hooks properly, some tests and checks will run, and the commit will succeed if all tests pass. If you prefer to run your tests manually, use the following commands:
-      - Static type checks:
-        ```poetry run mypy .```
-      - Code style checks:
-        ```poetry run ruff check```
-        - To automatically fix issues:
-          ```poetry run ruff check --fix```
-      - Spell checking:
-        ```poetry run codespell```
+	  - If you get errors, you might want to clean pre-commit before trying again:
+	  ```
+	    pre-commit clean
+		pre-commit uninstall
+		pre-commit install
+		poetry lock [--no-update]
+	  ```
+	  - For all hooks:
+	  ```pre-commit run --all-files```
+	  - For individual hooks
+		- Static type checks:
+			```poetry run mypy .```
+		- Code style checks:
+			```poetry run ruff check```
+			- To automatically fix issues:
+			```poetry run ruff check --fix```
+		- Spell checking:
+			```pre-commit run codespell --all-files```
 9. **Add repository secrets**: From your github web interface, add the following repository secrets: ```CODECOV_TOKEN``` (CodeCov), ```HF_TOKEN``` (HuggingFace), ```PYPI_TOKEN``` (Pypi).
 10. **Submit a pull request**: Once you are done adding your new amazing functionality, submit a pull request to merge the upstream issue branch into the upstream main.
 
@@ -109,7 +119,7 @@ Instructions adapted from [senselab package](https://github.com/sensein/senselab
 # Releasing a new version
 
 - Create an API Token on [Pypi](https://pypi.org/).
-- Create a [new release](https://github.com/danielmlow/construct-tracker/releases/new) on Github. 
+- Create a [new release](https://github.com/danielmlow/construct-tracker/releases/new) on Github.
 Create a new tag in the form ``*.*.*``.
 
 
@@ -132,7 +142,7 @@ poetry publish
 To reflect any new changes with a local installation
 ```
 poetry build
-pip install . 
+pip install .
 ```
 
 To reflect any new changes in pypi, change the version number in pyproject.toml
@@ -186,7 +196,7 @@ That will push your branch to the remote repository and set the upstream branch.
 
 ## Testing updates and pull requests
 
-The `@daniels_branch` installs that version. 
+The `@daniels_branch` installs that version.
 
 ```
 !pip install git+https://github.com/danielmlow/construct-tracker.git@daniels_branch#egg=construct_tracker&subdirectory=dist
@@ -214,8 +224,26 @@ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 git push origin main --force
 ```
 
+# pdoc
 
+When running
 
+```
+poetry run pdoc src/construct_tracker -t docs_style/pdoc-theme --docformat google
+```
 
+You might see errors starting with `Warn` then look for the error below. Fix. Sometimes you need to install a package, so include it as a dependency in the toml file. Then run
 
+```
+poetry lock
+poetry install
+```
 
+# pre-commit
+
+This will do some quality control before each commit.
+
+```
+poetry add --dev pre-commit
+poetry run pre-commit install
+```

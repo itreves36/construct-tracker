@@ -1,5 +1,6 @@
 import nltk
 from nltk.corpus import stopwords
+
 from .tokenizer import spacy_tokenizer
 
 nltk_language = {"en": "English", "es": "Spanish"}

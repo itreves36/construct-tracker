@@ -1,5 +1,5 @@
 # construct-tracker
-Track and measure constructs, concepts or categories in text documents. Built on top of the litellm package to use most Generative AI models. 
+Track and measure constructs, concepts or categories in text documents. Built on top of the litellm package to use most Generative AI models.
 
 **If you use, please cite**: Low DM, Rankin O, Coppersmith DDL, Bentley KH, Nock MK, Ghosh SS (2024). Building lexicons with generative AI result in lightweight and interpretable text models with high content validity. arXiv.
 
@@ -50,7 +50,7 @@ We'll repeat for other constructs ("Mindfulness", "Compassion"). Now count wheth
 
 ```python
 feature_vectors, matches_counter_d, matches_per_doc, matches_per_construct  = lexicon.extract(
-	documents, 
+	documents,
 	l.constructs,
 	normalize = False)
 
@@ -91,13 +91,13 @@ print(matches_per_doc)
 <!-- ## 2. Construct-text similarity (CTS): finding similar phrases to tokens in your lexicon
 
 ### Like Ctrl+F on steroids!
-Lexicons may miss relevant words if not contained in the lexicon (it only counts exact matches). Embeddings can find semantically similar tokens. CTS will scan the document and return how similar is the most related phrase to any word in the lexicon. 
+Lexicons may miss relevant words if not contained in the lexicon (it only counts exact matches). Embeddings can find semantically similar tokens. CTS will scan the document and return how similar is the most related phrase to any word in the lexicon.
 
 <!-- magick -density 300 docs/images/cts.pdf -background white -alpha remove -quality 100 docs/images/cts.png -->
 <!-- <img src="docs/images/cts.png" alt="Construct-text similarity" width="650"/> -->
 
 <!-- It will vectorize lexicon tokens and document tokens (e.g., phrases) into embeddings (quantitivae vector representing aspects of meaning). Then it will compute the similarity between both sets of tokens and return the maximum similarity as its score for the document.  -->
-<!-- 
+<!--
 
 ```python
 lexicon_dict = my_lexicon.to_dict()
@@ -106,16 +106,16 @@ features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = c
     lexicon_dict,
     documents,
     )
-	
+
 display(features)
 ```
 <img src="docs/images/cts_scores.png" alt="Construct-text similarity" width="700"/>
 
-So we see that even though compassion did not find an exact match it had some relationship to the first two documents.  --> 
+So we see that even though compassion did not find an exact match it had some relationship to the first two documents.  -->
 
 
 
-<!-- You can also sum the exact counts with the similarities for more fine-grained scores. 
+<!-- You can also sum the exact counts with the similarities for more fine-grained scores.
 
 <img src="docs/images/cts_scores_sum.png" alt="Construct-text similarity" width="700"/> -->
 
@@ -127,13 +127,13 @@ We provide many features to add/remove tokens, generate definitions, validate wi
 
 [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/danielmlow/construct-tracker/blob/daniels_branch/tutorials/suicide_risk_lexicon.ipynb)
 
-We have created a lexicon with 49 risk factors for suicidal thoughts and behaviors validated by clinicians who are experts in suicide research. 
+We have created a lexicon with 49 risk factors for suicidal thoughts and behaviors validated by clinicians who are experts in suicide research.
 ```python
 from construct_tracker import lexicon
 # Load lexicon
 srl = lexicon.load_lexicon(name = 'srl_v1-0')
 # Load only tokens that are highly prototypical of each construct
-srl_prototypes = lexicon.load_lexicon(name = 'srl_prototypes_v1-0') 
+srl_prototypes = lexicon.load_lexicon(name = 'srl_prototypes_v1-0')
 ```
 <!-- lexicon_dict = srl.to_dict()
 features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = cts.measure(
@@ -141,7 +141,7 @@ features, documents_tokenized, lexicon_dict_final_order, cosine_similarities = c
     documents_subset,
     )
 
-<img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> --> 
+<img src="docs/images/srl_cts_scores.png" alt="Construct-text similarity of Suicide Risk Lexicon" width="700"/> -->
 
 
 <br>
@@ -177,13 +177,13 @@ print(my_lexicon.constructs)
 	'tokens_lemmatized': [], # when counting you can lemmatize all tokens for better results
 	'remove': [], #which tokens to remove
 	'tokens_metadata': {'gpt-4o-2024-05-13, temperature-0, ...': {
-								'action': 'create', 
-								'tokens': [...], 
-								'prompt': 'Provide many single words and some short phrases ...', 
+								'action': 'create',
+								'tokens': [...],
+								'prompt': 'Provide many single words and some short phrases ...',
 								'time_elapsed': 14.21},
 						{'gpt-4o-2024-05-13, temperature-1, ...': { ... }},
-						}		
-	}, 
+						}
+	},
 'Mindfulness': {...},
 'Compassion': {...},
 }
@@ -197,7 +197,3 @@ print(my_lexicon.constructs)
 <!-- TODO -->
 
 See `docs/contributing.md`
-
-
-
-

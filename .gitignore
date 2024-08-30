@@ -5,15 +5,15 @@ suicide_risk_lexicon_cts.ipynb
 lbl2vec.ipynb
 
 
-# Data 
+# Data
 data/*
 
 *embeddings*.pickle
 
 # Exceptions
-!data/*/.gitkeep 
-!data/*/datasets_description.md 
-!data/*/*/.gitkeep  
+!data/*/.gitkeep
+!data/*/datasets_description.md
+!data/*/*/.gitkeep
 
 # Include lexicon_A directory and its contents
 !data/lexicons/suicide_risk_lexicon_v1-0/

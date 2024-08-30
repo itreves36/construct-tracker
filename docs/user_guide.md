@@ -14,7 +14,7 @@ feature_vectors_lc, cosine_scores_docs_lc = cts.measure(
       construct_tokens_d = construct_prototypes_tokens_d,
       construct_embeddings_d = construct_prototypes_embeddings_d,
       docs_embeddings_d = embeddings_tokens_docs_d,
-      method = lexicon_clause, 
+      method = lexicon_clause,
       summary_stat = ['max'],
       return_cosine_similarity=True,
       minmaxscaler = (0,1)
@@ -47,4 +47,3 @@ TODO: describe these attributes and methods:
  'to_dict',
  'to_pandas',
  'version'
-

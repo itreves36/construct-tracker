@@ -6,6 +6,7 @@ type_token_ratio, entropy, standardized_word_entropy,
 question_ratio, number_ratio, brunet's index, honore's statistic,
 and many others.
 """
+
 import math
 
 import numpy as np

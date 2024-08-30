@@ -1,0 +1,105 @@
+# Global configuration
+fail_fast: false  # Continue running hooks even if one fails
+
+repos:
+  # Poetry check to ensure pyproject.toml is correctly configured
+- repo: https://github.com/python-poetry/poetry
+  rev: 1.8.0
+  hooks:
+  - id: poetry-check
+    language_version: python3.9
+
+  # # Ruff for linting and formatting Python code
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.4.10
+  #   hooks:
+  #     - id: ruff          # Linter to catch stylistic and logical errors
+  #       language_version: python3.9
+  #       exclude: src/construct_tracker/data/lexicons/*
+  #     - id: ruff-format   # Formatter to automatically format code
+  #       exclude: src/construct_tracker/data/lexicons/*
+
+  # # Mypy for static type checking
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.10.0
+  #   hooks:
+  #     - id: mypy
+  #       args: [--ignore-missing-imports]  # Ignore missing imports for external packages
+  #       additional_dependencies:
+  #         - pydantic>=1.10.4
+  #         - types-requests  # Ensure type checking works with requests library
+
+  # Formatting YAML and TOML files
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.13.0
+  hooks:
+  - id: pretty-format-yaml
+    language_version: python3.9
+    args:
+    - --autofix
+    - --indent=2
+  - id: pretty-format-toml
+    exclude: ^poetry.lock$      # Exclude the Poetry lock file
+    args:
+    - --autofix
+    - --indent=2
+    - --no-sort        # Do not sort entries, keep the original order
+
+  # General pre-commit hooks for file checks
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-added-large-files
+    args: [--maxkb=15000]      # Prevent large files from being added to the repo
+  - id: check-case-conflict      # Detect case conflicts in file names
+  - id: end-of-file-fixer      # Ensure files end with a newline
+  - id: trailing-whitespace      # Remove trailing whitespace
+  - id: pretty-format-json
+    args:
+    - --autofix
+    - --indent=4
+    - --no-sort-keys        # Maintain the original order of keys
+  - id: check-merge-conflict      # Detect unresolved merge conflicts
+  - id: check-yaml      # Validate YAML file syntax
+  - id: check-json      # Validate JSON file syntax
+  - id: check-toml      # Validate TOML file syntax
+  - id: detect-private-key      # Prevent committing private keys
+  - id: name-tests-test      # Ensure test files follow naming conventions
+
+  # Codespell for spell checking
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.3.0
+  hooks:
+  - id: codespell
+    language_version: python3.9
+    args: ['--skip=*.csv,*.json,*.ipynb,*.txt,*.docx,*doc', --ignore-words-list=fpr]        # Skip spell check for Jupyter Notebooks
+    exclude: (^.*stop_words.py$|^.*vaderSentiment.py$)        # Exclude specific files
+    additional_dependencies:
+    - tomli        # Dependency for processing TOML files
+
+  # Clean and organize .env files
+- repo: https://github.com/hija/clean-dotenv
+  rev: v0.0.7
+  hooks:
+  - id: clean-dotenv      # Ensure .env files are clean and organized
+    language_version: python3.9
+
+  # Local hook to enforce .yaml extension over .yml
+- repo: local
+  hooks:
+  - id: yaml-file-extension
+    name: Prefer .yaml over .yml.
+    entry: YAML files must have .yaml extension.
+    language: fail
+    files: \.yml$
+
+  # Local hook to run pytest with testmon
+- repo: local
+  hooks:
+  - id: pytest
+    name: pytest
+    entry: poetry run pytest
+    language: system
+    types: [python]
+    pass_filenames: false      # Do not pass filenames to pytest
+    always_run: true      # Always run this hook

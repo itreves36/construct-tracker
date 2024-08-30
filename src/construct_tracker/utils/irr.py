@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.metrics import cohen_kappa_score
 from statsmodels.stats.inter_rater import fleiss_kappa
 
+
 def cohens_kappa(ratings, weights=None):
     """
     Calculate Cohen's weighted kappa for two raters.
@@ -12,6 +13,7 @@ def cohens_kappa(ratings, weights=None):
     """
     kappa = cohen_kappa_score(ratings[:, 0], ratings[:, 1], weights=weights)
     return kappa
+
 
 def calculate_fleiss_kappa(ratings):
     """
@@ -24,15 +26,13 @@ def calculate_fleiss_kappa(ratings):
     n_items, n_raters = ratings.shape
     max_rating = ratings.max() + 1
     rating_matrix = np.zeros((n_items, max_rating))
-    
+
     for i in range(n_items):
         for j in range(n_raters):
             rating_matrix[i, ratings[i, j]] += 1
 
-    kappa = fleiss_kappa(rating_matrix, method='fleiss')
+    kappa = fleiss_kappa(rating_matrix, method="fleiss")
     return kappa
-
-
 
 
 def binary_inter_rater_reliability(rater1, rater2):
