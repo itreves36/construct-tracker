@@ -1,3 +1,13 @@
+<!-- [![Build](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml?query=branch%3Amain) -->
+[![codecov](https://codecov.io/gh/danielmlow/construct-tracker/graph/badge.svg?token=9S8WY128PO)](https://codecov.io/gh/danielmlow/construct-tracker)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+[![PyPI](https://img.shields.io/pypi/v/construct-tracker.svg)](https://pypi.org/project/construct-tracker/)
+[![Python Version](https://img.shields.io/pypi/pyversions/construct-tracker)](https://pypi.org/project/construct-tracker)
+[![License](https://img.shields.io/pypi/l/construct-tracker)](https://opensource.org/licenses/Apache-2.0)
+
+<!-- [![pages](https://img.shields.io/badge/api-docs-blue)](https://sensein.github.io/construct-tracker) -->
+
 # construct-tracker
 Track and measure constructs, concepts or categories in text documents. Built on top of the litellm package to use most Generative AI models.
 
