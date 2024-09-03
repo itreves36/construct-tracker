@@ -1,11 +1,14 @@
+"""Some common machine learning pipelines."""
+
 import warnings
-from typing import Any, Dict, List, Optional, Union
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.impute import SimpleImputer
 from itertools import product
+from typing import Any, Dict, List, Optional
+
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+# ruff: noqa: E101
 
 
 def get_pipelines(
@@ -14,24 +17,27 @@ def get_pipelines(
     """Create a machine learning pipeline based on the specified model and feature vector.
 
     Args:
-            feature_vector: Type of feature vector ('tfidf' or other).
-            model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
-            tfidf_vectorizer: Whether to use TFIDF vectorizer.
-            random_state: Random state for reproducibility.
+                                                                    feature_vector: Type of feature vector ('tfidf' or other).
+                                                                    model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
+                                                                    tfidf_vectorizer: Whether to use TFIDF vectorizer.
+                                                                    random_state: Random state for reproducibility.
 
     Returns:
-            A configured machine learning pipeline.
+                                                                    A configured machine learning pipeline.
     """
-
+    # ruff: noqa: F401
     if "LGBM" in model_name:
         from lightgbm import LGBMClassifier, LGBMRegressor
-    elif "XGBC" in model_name:
+    elif "XGB" in model_name:
         from xgboost import XGBClassifier, XGBRegressor
+    elif "Logistic" in model_name or "Ridge" in model_name:
+        from sklearn.linear_model import LogisticRegression, Ridge
+    # ruff: enable
     model = globals()[model_name]()
     model.set_params(random_state=random_state)
 
     if feature_vector == "tfidf":
-        if tfidf_vectorizer == True:
+        if tfidf_vectorizer:
             from sklearn.feature_extraction.text import TfidfVectorizer
 
             vectorizer = TfidfVectorizer(
@@ -77,14 +83,14 @@ def get_params(
     """Generate a parameter grid for model hyperparameter tuning.
 
     Args:
-            feature_vector: Type of feature vector ('tfidf' or other).
-            model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
-            toy: Whether to use a toy version of the parameter grid.
-            ridge_alphas: List of alpha values for Ridge regularization.
-            ridge_alphas_toy: List of alpha values for toy version.
+                                                                    feature_vector: Type of feature vector ('tfidf' or other).
+                                                                    model_name: Name of the model to use ('Ridge', 'LogisticRegression', etc.).
+                                                                    toy: Whether to use a toy version of the parameter grid.
+                                                                    ridge_alphas: List of alpha values for Ridge regularization.
+                                                                    ridge_alphas_toy: List of alpha values for toy version.
 
     Returns:
-            A dictionary containing the parameter grid.
+                                                                    A dictionary containing the parameter grid.
     """
     if ridge_alphas is None:
         ridge_alphas = [0.001, 0.01, 0.1, 1, 10, 100, 1000]
@@ -93,6 +99,7 @@ def get_params(
 
     if model_name in ["LogisticRegression"]:
         if feature_vector == "tfidf":
+            # ruff: noqa: F601
             if toy:
                 warnings.warn("WARNING, running toy version")
                 param_grid = {
@@ -103,6 +110,7 @@ def get_params(
                     "vectorizer__max_features": [512, 2048, None],
                     "model__C": ridge_alphas,
                 }
+            # ruff: enable
 
         else:
             if toy:
@@ -195,17 +203,17 @@ def get_combinations(parameters: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
     """Generate all combinations of parameter sets.
 
     Args:
-            parameters: A dictionary of model parameters and their corresponding values.
+                                                                    parameters: A dictionary of model parameters and their corresponding values.
 
     Returns:
-            A list of dictionaries, each representing a unique combination of parameters.
+                                                                    A list of dictionaries, each representing a unique combination of parameters.
 
     Example:
-            parameters =   {'model__colsample_bytree': [1, 0.5, 0.1],
-                            'model__max_depth': [-1,10,20], #-1 is the default and means No max depth
-                            'model__min_child_weight': [0.01, 0.001, 0.0001],
-                            'model__min_child_samples': [10, 20,40], #alias: min_data_in_leaf
-                       }
+                                                                    parameters =   {'model__colsample_bytree': [1, 0.5, 0.1],
+                                                                                                                                                                                                    'model__max_depth': [-1,10,20], #-1 is the default and means No max depth
+                                                                                                                                                                                                    'model__min_child_weight': [0.01, 0.001, 0.0001],
+                                                                                                                                                                                                    'model__min_child_samples': [10, 20,40], #alias: min_data_in_leaf
+                                                                                                                                       }
 
 
     """
@@ -220,3 +228,6 @@ def get_combinations(parameters: Dict[str, List[Any]]) -> List[Dict[str, Any]]:
             parameter_set_i[k] = combination[i]
         parameter_set_combinations.append(parameter_set_i)
     return parameter_set_combinations
+
+
+# ruff: enable

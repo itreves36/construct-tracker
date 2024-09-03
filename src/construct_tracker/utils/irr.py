@@ -1,26 +1,47 @@
+"""Inter-rater reliability (IRR) measures."""
+
+from typing import List, Optional, Union
+
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 from statsmodels.stats.inter_rater import fleiss_kappa
 
 
-def cohens_kappa(ratings, weights=None):
+def cohens_kappa(ratings: np.ndarray, weights: Optional[str] = None) -> float:
     """
     Calculate Cohen's weighted kappa for two raters.
 
-    :param ratings: a 2D NumPy array with two columns, each column representing a rater's ratings
-    :param weights: a string, either 'linear' or 'quadratic', determining the type of weights to use
-    :return: the weighted kappa score
+    Args:
+        ratings (np.ndarray): A 2D NumPy array with two columns, each column representing a rater's ratings.
+        weights (Optional[str]): A string, either 'linear' or 'quadratic', determining the type of weights to use.
+                                 Defaults to None.
+
+    Returns:
+        float: The weighted kappa score.
+
+    Example:
+        >>> ratings = np.array([[1, 2], [2, 2], [3, 3], [0, 1], [1, 1]])
+        >>> cohens_kappa(ratings, weights='linear')
+        0.42857142857142855
     """
     kappa = cohen_kappa_score(ratings[:, 0], ratings[:, 1], weights=weights)
     return kappa
 
 
-def calculate_fleiss_kappa(ratings):
+def calculate_fleiss_kappa(ratings: np.ndarray) -> float:
     """
     Calculate Fleiss' kappa for three or more raters.
 
-    :param ratings: a 2D NumPy array where rows represent items and columns represent raters
-    :return: the Fleiss' kappa score
+    Args:
+        ratings (np.ndarray): A 2D NumPy array where rows represent items and columns represent raters.
+
+    Returns:
+        float: The Fleiss' kappa score.
+
+    Example:
+        >>> ratings = np.array([[1, 2, 1], [2, 2, 2], [3, 3, 2], [0, 1, 0], [1, 1, 2]])
+        >>> calculate_fleiss_kappa(ratings)
+        0.2857142857142857
     """
     # Count the number of times each rating occurs per item
     n_items, n_raters = ratings.shape
@@ -35,16 +56,22 @@ def calculate_fleiss_kappa(ratings):
     return kappa
 
 
-def binary_inter_rater_reliability(rater1, rater2):
+def binary_inter_rater_reliability(rater1: Union[List[int], np.ndarray], rater2: Union[List[int], np.ndarray]) -> float:
     """
     Calculate Cohen's Kappa for binary inter-rater reliability.
 
-    Parameters:
-    rater1 (list or array): Ratings from the first rater
-    rater2 (list or array): Ratings from the second rater
+    Args:
+        rater1 (Union[List[int], np.ndarray]): Ratings from the first rater.
+        rater2 (Union[List[int], np.ndarray]): Ratings from the second rater.
 
     Returns:
-    float: Cohen's Kappa score
+        float: Cohen's Kappa score.
+
+    Example:
+        >>> rater1 = [1, 0, 1, 1, 0]
+        >>> rater2 = [1, 0, 0, 1, 0]
+        >>> binary_inter_rater_reliability(rater1, rater2)
+        0.6
     """
     kappa = cohen_kappa_score(rater1, rater2)
     return kappa

@@ -9,25 +9,32 @@ repos:
   - id: poetry-check
     language_version: python3.9
 
-  # # Ruff for linting and formatting Python code
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.4.10
-  #   hooks:
-  #     - id: ruff          # Linter to catch stylistic and logical errors
-  #       language_version: python3.9
-  #       exclude: src/construct_tracker/data/lexicons/*
-  #     - id: ruff-format   # Formatter to automatically format code
-  #       exclude: src/construct_tracker/data/lexicons/*
+# Sort imports
+- repo: https://github.com/pre-commit/mirrors-isort
+  rev: v5.10.1  # You can specify the version of isort you want to use
+  hooks:
+  - id: isort
+    args: [--profile, black]        # Optional: Use the Black profile if you also use Black
 
-  # # Mypy for static type checking
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.10.0
-  #   hooks:
-  #     - id: mypy
-  #       args: [--ignore-missing-imports]  # Ignore missing imports for external packages
-  #       additional_dependencies:
-  #         - pydantic>=1.10.4
-  #         - types-requests  # Ensure type checking works with requests library
+# Ruff for linting and formatting Python code
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.4.10
+  hooks:
+  - id: ruff            # Linter to catch stylistic and logical errors
+    language_version: python3.9
+    exclude: ^src/construct_tracker/data/lexicons/.*$
+  - id: ruff-format     # Formatter to automatically format code
+    exclude: ^src/construct_tracker/data/lexicons/.*$
+
+# # Mypy for static type checking
+# - repo: https://github.com/pre-commit/mirrors-mypy
+#   rev: v1.10.0
+#   hooks:
+#   - id: mypy
+#     args: [--ignore-missing-imports]    # Ignore missing imports for external packages
+#     additional_dependencies:
+#     - pydantic>=1.10.4
+#     - types-requests      # Ensure type checking works with requests library
 
   # Formatting YAML and TOML files
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks

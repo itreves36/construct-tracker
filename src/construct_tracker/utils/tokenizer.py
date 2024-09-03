@@ -1,45 +1,76 @@
-"""Tokenize strings.
+"""
+Tokenize strings.
 
 Source: https://stackoverflow.com/questions/65227103/clause-extraction-long-sentence-segmentation-in-python
 
 Alternatives:
-- second response: https://stackoverflow.com/questions/39320015/how-to-split-an-nlp-parse-tree-to-clauses-independent-and-subordinate
-- TODO: also consider subordinate clauses while, if, because, instead https://stackoverflow.com/questions/68616708/how-to-split-sentence-into-clauses-in-python
+- Second response: https://stackoverflow.com/questions/39320015/how-to-split-an-nlp-parse-tree-to-clauses-independent-and-subordinate
+- TODO: Also consider subordinate clauses: while, if, because, instead: https://stackoverflow.com/questions/68616708/how-to-split-sentence-into-clauses-in-python
 
 Author: Daniel M. Low
 License: Apache 2.0.
 """
 
+import re
 import subprocess
 import sys
-import re
+from typing import List, Optional, Union
+
 import deplacy
 import spacy
 import tqdm
 
 
 def spacy_tokenizer(
-    docs,
-    nlp=None,
-    method="clause",
-    lowercase=False,
-    display_tree=False,
-    remove_punct=True,
-    clause_remove_conj=True,
-):
+    docs: List[str],
+    nlp: Optional[spacy.language.Language] = None,
+    method: str = "clause",
+    lowercase: bool = False,
+    display_tree: bool = False,
+    remove_punct: bool = True,
+    clause_remove_conj: bool = True,
+) -> Union[List[List[str]], List[str]]:
+    """
+    Tokenizes documents using spaCy with options for word, sentence, or clause tokenization.
+
+    Args:
+            docs (List[str]): A list of documents to tokenize.
+            nlp (Optional[spacy.language.Language], optional): Preloaded spaCy model. If None, the model will be loaded. Defaults to None.
+            method (str, optional): The method of tokenization ('word', 'sentence', 'clause'). Defaults to 'clause'.
+            lowercase (bool, optional): If True, tokens are converted to lowercase. Defaults to False.
+            display_tree (bool, optional): If True, displays the dependency tree. Defaults to False.
+            remove_punct (bool, optional): If True, removes punctuation from tokens. Defaults to True.
+            clause_remove_conj (bool, optional): If True, removes conjunctions at the end of clauses. Defaults to True.
+
+    Returns:
+            Union[List[List[str]], List[str]]: Tokenized documents as a list of lists of tokens.
+
+    Example:
+            >>> docs = ["I am happy but tired. I will rest."]
+            >>> spacy_tokenizer(docs, method="clause")
+            [['I am happy', 'tired.', 'I will rest.']]
+            # Try these:
+            docs_long = [
+                                            "I've been feeling all alone and I feel like a burden to my family. I'll do therapy, but I'm pretty hopeless.",
+                                            'I am very sad but hopeful and I will start therapy',
+                                            'I am very sad, but hopeful and I will start therapy',
+                                            "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step."
+                            ]
+    """
+    if method not in ["word", "clause", "sentence"]:
+        print("Warning: method not found. Available methods are: 'word', 'clause', 'sentence'")
+        return None
     if nlp is None:
+        model = "en_core_web_sm"
         try:
-            model = "en_core_web_sm"
             nlp = spacy.load(model)
-        except:
+        except OSError:
             print(f"Model {model} not found. Installing...")
             subprocess.check_call([sys.executable, "-m", "spacy", "download", model])
-            model = "en_core_web_sm"
             nlp = spacy.load(model)
 
     if method == "word":
-        tokens_for_all_docs = [[token.text.lower() if lowercase else token.text for token in nlp(doc)] for doc in docs]
-        return tokens_for_all_docs
+        return [[token.text.lower() if lowercase else token.text for token in nlp(doc)] for doc in docs]
 
     elif method == "clause":
         chunks_for_all_docs = []
@@ -47,9 +78,8 @@ def spacy_tokenizer(
             if display_tree:
                 print(doc)
                 print(deplacy.render(doc))
-                # Note: Only print the tree if necessary, as it slows down the process.
 
-            seen = set()  # keep track of covered words
+            seen = set()
             chunks = []
             for sent in doc.sents:
                 heads = [cc for cc in sent.root.children if cc.dep_ == "conj"]
@@ -88,53 +118,42 @@ def spacy_tokenizer(
         return docs_clauses_clean
 
     elif method == "sentence":
-        docs_tokenized = [[sent.text for sent in nlp(string).sents] for string in docs]
-        return docs_tokenized
+        return [[sent.text for sent in nlp(string).sents] for string in docs]
 
 
-"""
+def custom_tokenizer(string: str) -> List[str]:
+    """
+    Tokenizes a string into words using a regular expression.
 
+    Args:
+            string (str): The input string to tokenize.
 
+    Returns:
+            List[str]: A list of words.
 
-
-docs_long = [
-	"I've been feeling all alone and I feel like a burden to my family. I'll do therapy, but I'm pretty hopeless.",
-	'I am very sad but hopeful and I will start therapy',
-	'I am very sad, but hopeful and I will start therapy',
-	"I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step."
-]
-
-
-docs_long_clauses = spacy_tokenizer(docs_long,
-										language = 'en', model='en_core_web_sm',
-										method = 'clause', # clause tokenization
-										lowercase=False,
-										display_tree = True,
-										remove_punct=False,
-										clause_remove_conj = True)
-
-docs_long_clauses
-"""
-
-
-# def nltk_lemmatize(text):
-# 	from nltk import word_tokenize
-# 	from nltk.stem import WordNetLemmatizer
-# 	lemmatizer = WordNetLemmatizer()
-#     return [lemmatizer.lemmatize(w) for w in word_tokenize(text)]
-
-# from sklearn.feature_extraction.text import TfidfVectorizer
-
-# tfidf_vectorizer = TfidfVectorizer(tokenizer=nltk_lemmatize, stop_words='english')
-
-
-
-def custom_tokenizer(string):
+    Example:
+            >>> custom_tokenizer("Hello, world!")
+            ['Hello', 'world']
+    """
     from nltk.tokenize import RegexpTokenizer
+
     tokenizer = RegexpTokenizer(r"\w+")
     words = tokenizer.tokenize(string)
     return words
 
 
-def tokenizer_remove_punctuation(text):
-    return re.split("\\s+", text)
+def tokenizer_remove_punctuation(text: str) -> List[str]:
+    """
+    Tokenizes a string and removes punctuation by splitting on whitespace.
+
+    Args:
+            text (str): The input string to tokenize.
+
+    Returns:
+            List[str]: A list of tokens.
+
+    Example:
+            >>> tokenizer_remove_punctuation("Hello, world!")
+            ['Hello,', 'world!']
+    """
+    return re.split(r"\s+", text)

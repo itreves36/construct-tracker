@@ -1,7 +1,7 @@
 ,lexicon_name,clean_name,category,representative_example,notes
 0,Positiv_GI,positive_gi,sentiment,"happy, altruistic, amazement",
 1,Negativ_GI,negative,sentiment,"sad, burden, helplessness",
-2,Pstv_GI,positive_gi_2,sentiment,"calm, friend, rich",osgood 
+2,Pstv_GI,positive_gi_2,sentiment,"calm, friend, rich",osgood
 3,Affil_GI,affiliation_gi,social,"charm, appeal, friendship",
 4,Ngtv_GI,negative_gi_2,sentiment,"bitter, cruel, horrible",earlier version of Negativ
 5,Hostile_GI,hostility_gi,power,"aggressor, endanger, terrorism",

@@ -1,9 +1,9 @@
-"""Send a prompt to the specified model and return the generated response.
-"""
+"""Send a prompt to the specified model and return the generated response."""
+
+from typing import Optional
 
 import litellm
 from litellm import completion
-from typing import Optional
 
 litellm.drop_params = True  # will ignore parameters you set if they don't belong in a model
 

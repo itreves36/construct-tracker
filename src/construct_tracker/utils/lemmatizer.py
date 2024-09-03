@@ -1,70 +1,47 @@
-# print('spacy', spacy.__version__)
+"""Lemmatize documents."""
+
 import subprocess
+from typing import List, Union
 
 import numpy as np
 import spacy
 
 
-def spacy_lemmatizer(docs, language="en"):
-    # docs = ['recovery limbo anyone else recovered still unhealthy relationship foodbody basically eating maintenance past 6 years period quite severe anorexia 14ish still feel like barely changed still feel proud skip meal feel bad body etc anyone else similar boat feels like better long time guess',
-    #         'food worst drug hey guys fat fatty fat thinking sucks quit food eat like dopamine stop quit smoking drinking weed heroin meth food sucks relationship food sucks hate sucks thanks coming rant wanted chest',
-    #         'focus anything bring eat guess going fail finals one freshman fuck ups taken gap year feel consumed pain crippling falling knees type']
-    # todo my_module = importlib.import_module("spacy.lang."+language) # from spacy.lang.en import English
+def spacy_lemmatizer(docs: List[Union[str, np.str_]], language: str = "en") -> List[List[str]]:
+    """
+    Lemmatizes a list of documents using spaCy.
 
+    Args:
+        docs (List[Union[str, np.str_]]): A list of documents to lemmatize. Each document can be a string or a NumPy string object.
+        language (str, optional): The language model to use for lemmatization. Defaults to "en".
+
+    Returns:
+        List[List[str]]: A list of lists, where each inner list contains the lemmatized tokens of the corresponding document.
+
+    Example:
+        docs = ['alone', "I've been worried but hopeful", "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step.", "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step."]
+        docs = stop_words.remove(docs)
+        docs = spacy_lemmatizer(docs)
+        print(docs)
+        # Output: [['alone'], ['worried', 'hopeful'], ['feel', 'alone', 'hopeful', 'ill', 'therapy', 'got', 'to', 'take', 'step', 'step']]
+    """
     if language == "en":
         try:
             nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
-        except:
-            print("downloading spacy en_core_web_sm")
+        except Exception as e:
+            print(f"Error: {e}. Downloading spaCy model: en_core_web_sm")
             subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-            print("finished downloading")
+            print("Finished downloading")
             nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
+
     docs_lemmatized = []
 
     for doc in docs:
-        if type(doc) == np.str_:
+        if isinstance(doc, np.str_):
             doc = doc.item()
-        doc = nlp(doc)
+        spacy_doc = nlp(doc)
 
-        doc_lemmatized = [token.lemma_ for token in doc]
+        doc_lemmatized = [token.lemma_ for token in spacy_doc]
         docs_lemmatized.append(doc_lemmatized)
+
     return docs_lemmatized
-
-
-# from textblob import TextBlob
-
-
-# def textblob_lemmatizer(docs):
-
-#     for doc in docs:
-#         doc = TextBlob(doc)
-
-#         doc_lemmatized = [word.lemmatize() for word in doc.words]
-#         docs.append(doc_lemmatized)
-#     return docs
-
-# See also:
-# w.singularize()
-
-# spellchecker
-# doc = doc.correct() # don't like it: changed Dr>Or 3yrs>eyes
-# w = Word('Dr')
-# w.spellcheck() #This will return the confidence score for each suggestion. Could become interactive.
-
-
-"""
-import utils.stop_words as stop_words
-docs =['alone', "I've been worried but hopeful", "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step."]
-docs = spacy_lemmatizer(docs)
-docs = [stop_words.remove(i) for i in docs]
-print(docs)
->>> [['alone'], ['', '', '', 'worry', '', 'hopeful'], ['', '', '', 'feel', '', 'alone', '', 'hopeful', '', '', '', '', 'therapy', '', 'got', '', 'take', '', 'step', '', 'step', '']]
-
-
-docs =['alone', "I've been worried but hopeful", "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step.", "I've been feeling all alone but hopeful and I'll do therapy. Gotta take it step by step."]
-docs = stop_words.remove(docs)
-docs = spacy_lemmatizer(docs)
-print(docs)
->>> [['alone'], ['worried', 'hopeful'], ['feel', 'alone', 'hopeful', 'ill', 'therapy', 'got', 'to', 'take', 'step', 'step']]
-
-"""

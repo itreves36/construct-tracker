@@ -1,12 +1,41 @@
+"""How to handle logging."""
+
 import logging
 
 
 class InfoFilter(logging.Filter):
-    def filter(self, record):
+    """
+    A logging filter that only allows INFO level messages.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """
+        Filters log records to allow only INFO level messages.
+
+        Args:
+            record (logging.LogRecord): The log record to be filtered.
+
+        Returns:
+            bool: True if the record's level is INFO, False otherwise.
+        """
         return record.levelno == logging.INFO
 
 
-def setup_logger():
+def setup_logger() -> logging.Logger:
+    """
+    Sets up a logger with different handlers and formatters for various logging levels.
+
+    The logger outputs DEBUG level messages to the console with a default formatter,
+    and INFO level messages with a custom formatter.
+
+    Returns:
+        logging.Logger: Configured logger instance.
+
+    Example:
+        logger = setup_logger()
+        logger.info("This is an info message.")
+        logger.debug("This is a debug message.")
+    """
     logger = logging.getLogger(__name__)
 
     if not logger.hasHandlers():
@@ -24,7 +53,7 @@ def setup_logger():
         console_handler.setFormatter(default_formatter)
         logger.addHandler(console_handler)
 
-        # Create another handler for info level with a different formatter
+        # Create another handler for INFO level with a different formatter
         info_handler = logging.StreamHandler()
         info_handler.setLevel(logging.INFO)
         info_handler.setFormatter(message_only_formatter)

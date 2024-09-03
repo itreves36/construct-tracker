@@ -1,5 +1,7 @@
+"""Feature importance for different sklearn and xgboost and lgbm models."""
+
 import warnings
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd

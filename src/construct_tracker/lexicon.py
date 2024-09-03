@@ -7,13 +7,14 @@ import datetime
 import inspect
 import json
 import os
+import pickle
 import random
 import re
 import string
 import time
 from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple, Union
-import pickle
+
 import dill
 import numpy as np
 import pandas as pd
@@ -696,8 +697,10 @@ class Lexicon:
         if isinstance(documents_df, pd.DataFrame):
             try:
                 assert documents_df.shape[0] == len(docs)
-            except:
-                raise ValueError("documents_df should have the same amount of rows as the length of documents")
+            except Exception as e:
+                raise ValueError(
+                    f"Error {e}: documents_df should have the same amount of rows as the length of documents"
+                )
 
         lexicon_dict = (
             self.constructs.copy()
@@ -1407,7 +1410,6 @@ def highlight_matches(
 
     highlighted_docs_found = 0
     for doc_index, (matches_n, words) in enumerate(matches):
-
         if highlighted_docs_found >= matches_n:
             break
         if matches_n == 0 and not words:

@@ -113,8 +113,14 @@ ignore = [
   "ANN101",  # self should not be annotated.
   "ANN102",  # cls should not be annotated.
   "ANN401",  # type hint should not be Any because defeats the purpose
+  "D200",  # One-line docstring should fit on one line
+  "D202",  # No blank lines allowed after function docstring (found 1)
+  "D205",  # 1 blank line required between summary line and description
   "D206",  # Docstring should be indented with spaces, not tabs
-  "E501"  # line too long
+  "D212",  # Multi-line docstring summary should start at the first line
+  "D415",  # First line should end with a period, question mark, or exclamation point
+  "E501",  # line too long
+  "F541"  # f-string without any placeholders
 ]
 fixable = ["ALL"]
 unfixable = []

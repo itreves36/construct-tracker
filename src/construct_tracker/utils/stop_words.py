@@ -1,3 +1,8 @@
+"""Remove stop words."""
+
+import string
+from typing import List, Optional
+
 import nltk
 from nltk.corpus import stopwords
 
@@ -505,27 +510,73 @@ nltk_stop_words = {
 }
 
 
-import string
+def remove_punctuation(doc: str) -> str:
+    """
+    Removes all punctuation from the input document.
 
+    Args:
+        doc (str): The document from which to remove punctuation.
 
-def remove_puctuation(doc):
+    Returns:
+        str: The document with punctuation removed.
+
+    Example:
+        >>> remove_punctuation("Hello, world!")
+        'Hello world'
+    """
     doc = doc.translate(str.maketrans("", "", string.punctuation))
     return doc
 
 
-def return_stopwords(method="nltk", language="en"):
+def return_stopwords(method: str = "nltk", language: str = "en") -> List[str]:
+    """
+    Returns a list of stopwords for the specified language using the specified method.
+
+    Args:
+        method (str, optional): The method to use for retrieving stopwords. Defaults to "nltk".
+        language (str, optional): The language for which to retrieve stopwords. Defaults to "en".
+
+    Returns:
+        List[str]: A list of stopwords.
+
+    Example:
+        >>> return_stopwords()
+        ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', ...]
+    """
     if method == "nltk":
         return stopwords.words(nltk_language.get(language))
 
 
-def remove_stopwords_doc(word_list, method="nltk", language="en", extend_stopwords=None):
+def remove_stopwords_doc(
+    word_list: List[str], method: str = "nltk", language: str = "en", extend_stopwords: Optional[List[str]] = None
+) -> str:
+    """
+    Removes stopwords from a list of words.
+
+    Args:
+        word_list (List[str]): A list of words to filter.
+        method (str, optional): The method to use for retrieving stopwords. Defaults to "nltk".
+        language (str, optional): The language for which to retrieve stopwords. Defaults to "en".
+        extend_stopwords (Optional[List[str]], optional): Additional stopwords to include. Defaults to None.
+
+    Returns:
+        str: A string with stopwords removed.
+
+    Example:
+        >>> remove_stopwords_doc(["this", "is", "a", "test"])
+        'test'
+    """
     if method == "nltk":
         sws = nltk_stop_words.get(language)
         if sws is None:
-            nltk.download("stopwords")
-            from nltk.corpus import stopwords
+            try:
+                nltk.download("stopwords")
+            except Exception as e:
+                print(f"An error occurred while downloading NLTK stopwords: {e}")
+                return " ".join(word_list)
 
             sws = stopwords.words(nltk_language.get(language))
+
         if extend_stopwords:
             sws.extend(extend_stopwords)
 
@@ -534,12 +585,33 @@ def remove_stopwords_doc(word_list, method="nltk", language="en", extend_stopwor
     return filtered_words
 
 
-def remove(docs, language="en", method="nltk", remove_punct=True, extend_stopwords=None):
-    # docs = ['Recovery limbo Anyone else "recovered", but still have an unhealthy relationship with food/body? I\'ve basically been eating maintenance for the past 6 years after a period of quite severe anorexia at 14-ish, but I still feel like I\'ve barely changed. Still feel proud if I skip a meal, feel bad about my body, etc.\n\n&amp;#x200B;\n\nAnyone else in a similar boat? Just feels like it should be better after such a long time I guess.',
-    #         'Food is the worst "drug" Hey guys I\'m fat. I\'m a fatty fat and I was just thinking it sucks that you cant quit food. When I eat its like all the dopamine and I cant stop. You can quit smoking or drinking or weed or heroin or meth but not food and that sucks because my relationship with food sucks and I hate it and it sucks. \n\nThanks for coming to my rant I just wanted that off my chest',
-    #         "I can't focus on anything but just can't bring myself to eat. So I guess I'm going to fail finals and be one of those freshman fuck ups who should've taken a gap year. I feel consumed by pain. The crippling, falling to your knees type."]
+def remove(
+    docs: List[str],
+    language: str = "en",
+    method: str = "nltk",
+    remove_punct: bool = True,
+    extend_stopwords: Optional[List[str]] = None,
+) -> List[str]:
+    """
+    Preprocesses a list of documents by removing punctuation, converting to lowercase, tokenizing, and removing stopwords.
+
+    Args:
+        docs (List[str]): A list of documents to preprocess.
+        language (str, optional): The language of the documents. Defaults to "en".
+        method (str, optional): The method to use for retrieving stopwords. Defaults to "nltk".
+        remove_punct (bool, optional): Whether to remove punctuation. Defaults to True.
+        extend_stopwords (Optional[List[str]], optional): Additional stopwords to include. Defaults to None.
+
+    Returns:
+        List[str]: A list of preprocessed documents.
+
+    Example:
+        >>> docs = ["This is a test document.", "I love programming!"]
+        >>> remove(docs)
+        ['test document', 'love programming']
+    """
     if remove_punct:
-        docs = [remove_puctuation(doc) for doc in docs]
+        docs = [remove_punctuation(doc) for doc in docs]
 
     docs = [doc.lower() for doc in docs]
     docs = spacy_tokenizer(docs, method="word", language="en", lowercase=True)
@@ -549,9 +621,3 @@ def remove(docs, language="en", method="nltk", remove_punct=True, extend_stopwor
         for word_list in docs
     ]
     return filtered_docs
-
-
-"""
-docs =  ['i am a boy. How about you?', 'I went to the supermarket']
-print(remove(docs, language = 'en', method = 'nltk', remove_punct=True))
-"""

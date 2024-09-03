@@ -1,4 +1,5 @@
 """Module for measuring constructs in text using construct-text similarity.
+
 Author: Daniel Low
 License: Apache 2.0.
 """
@@ -206,7 +207,7 @@ def measure(
             assert len(summary_stat) == 1
         except AssertionError as e:
             raise ValueError(
-                "when count_if_exact_match is different than False, summary_stat should be a single statistic like ['max'], because we'll replace cosine similarities with counts >=1."
+                f"Error {e}: when count_if_exact_match is different than False, summary_stat should be a single statistic like ['max'], because we'll replace cosine similarities with counts >=1."
             )
 
         try:
@@ -236,11 +237,11 @@ def measure(
             stored_embeddings = dill.load(open(stored_embeddings_path, "rb"))
             logger.info(f"Loaded existing lexicon token embeddings from: {stored_embeddings_path}")
 
-        except:
+        except Exception as e:
             # If you need to encode new tokens:
             tokens_to_encode = [n for n in lexicon_tokens_concat if n not in stored_embeddings.keys()]
             logger.warning(
-                "Did not find it. Extracting all lexicon token embeddings from scratch instead of loading stored embeddings..."
+                f"Error {e}. Did not find it. Extracting all lexicon token embeddings from scratch instead of loading stored embeddings..."
             )
             stored_embeddings = {}
 

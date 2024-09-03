@@ -1,4 +1,5 @@
-import warnings
+"""Compute machine learning performance using different metric and add to a common dataframe."""
+
 from collections import Counter
 
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ from sklearn.metrics import (
     f1_score,
     precision_recall_curve,
     roc_auc_score,
+    roc_curve,
 )
 
 
@@ -29,20 +31,21 @@ def cm(
     """Generates and saves confusion matrices.
 
     Args:
-            y_true (np.ndarray): True labels.
-            y_pred (np.ndarray): Predicted labels.
-            output_dir (str): Directory to save the output files.
-            output_filename (str): Filename for the output files.
-            classes (list, optional): List of class names. Defaults to [0, 1].
-            save (bool, optional): Whether to save the output files. Defaults to True.
+                    y_true (np.ndarray): True labels.
+                    y_pred (np.ndarray): Predicted labels.
+                    output_dir (str): Directory to save the output files.
+                    output_filename (str): Filename for the output files.
+                    classes (list, optional): List of class names. Defaults to [0, 1].
+                    save (bool, optional): Whether to save the output files. Defaults to True.
 
     Returns:
-            tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Confusion matrix, normalized confusion matrix, and meaning matrix.
+                    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Confusion matrix, normalized confusion matrix, and meaning matrix.
     """
 
     try:
         classes = [n.replace("_", " ").capitalize() for n in classes]
-    except:
+    except Exception as e:
+        print(f"Error: {e}")
         pass
     cm = confusion_matrix(y_true, y_pred, normalize=None)
     cm_df = pd.DataFrame(cm, index=classes, columns=classes)
@@ -78,17 +81,17 @@ def plot_roc_auc_curve(
     """Plots the ROC AUC curve.
 
     Args:
-            y_true (np.ndarray): True labels.
-            y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
-            output_dir (str): Directory to save the output files.
-            output_filename (str): Filename for the output files.
-            fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
-            dpi (int, optional): DPI of the saved figure. Defaults to 300.
-            save (bool, optional): Whether to save the figure. Defaults to True.
-            size (int, optional): Font size for the plot. Defaults to 12.
+                    y_true (np.ndarray): True labels.
+                    y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+                    output_dir (str): Directory to save the output files.
+                    output_filename (str): Filename for the output files.
+                    fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
+                    dpi (int, optional): DPI of the saved figure. Defaults to 300.
+                    save (bool, optional): Whether to save the figure. Defaults to True.
+                    size (int, optional): Font size for the plot. Defaults to 12.
 
     Returns:
-            tuple[np.ndarray, np.ndarray, float]: False positive rate, true positive rate, and ROC AUC score.
+                    tuple[np.ndarray, np.ndarray, float]: False positive rate, true positive rate, and ROC AUC score.
     """
     # calculate the fpr and tpr for all thresholds of the classification
     # Softmax. not really making sense.
@@ -130,17 +133,17 @@ def plot_pr_auc_curve(
     """Plots the Precision-Recall AUC curve.
 
     Args:
-            y_true (np.ndarray): True labels.
-            y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
-            output_dir (str): Directory to save the output files.
-            output_filename (str): Filename for the output files.
-            fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
-            dpi (int, optional): DPI of the saved figure. Defaults to 300.
-            save (bool, optional): Whether to save the figure. Defaults to True.
-            size (int, optional): Font size for the plot. Defaults to 12.
+                    y_true (np.ndarray): True labels.
+                    y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+                    output_dir (str): Directory to save the output files.
+                    output_filename (str): Filename for the output files.
+                    fig_format (str, optional): Format of the saved figure. Defaults to 'png'.
+                    dpi (int, optional): DPI of the saved figure. Defaults to 300.
+                    save (bool, optional): Whether to save the figure. Defaults to True.
+                    size (int, optional): Font size for the plot. Defaults to 12.
 
     Returns:
-            tuple[np.ndarray, np.ndarray, float]: Precision, recall, and PR AUC score.
+                    tuple[np.ndarray, np.ndarray, float]: Precision, recall, and PR AUC score.
     """
     # def plot_pr_auc_curve(y_true, y_proba_1, output_dir, output_filename, fig_format = 'png', dpi=300, save=True, size = 12):
     plt.clf()
@@ -186,22 +189,23 @@ def calculate_npv(tn: int, fn: int) -> float:
     """Calculates the Negative Predictive Value (NPV).
 
     Args:
-            tn (int): True negatives.
-            fn (int): False negatives.
+                    tn (int): True negatives.
+                    fn (int): False negatives.
 
     Returns:
-            float: Negative Predictive Value (NPV).
+                    float: Negative Predictive Value (NPV).
 
     Example:
-            tn = 50  # Number of true negatives
-            fn = 10  # Number of false negatives
+                    tn = 50  # Number of true negatives
+                    fn = 10  # Number of false negatives
 
-            npv = calculate_npv(tn, fn)
-            print(f"Negative Predictive Value (NPV): {npv}")
+                    npv = calculate_npv(tn, fn)
+                    print(f"Negative Predictive Value (NPV): {npv}")
     """
     # Check for a case where the denominator would be zero
     if tn + fn == 0:
-        return "Undefined (TN + FN is 0, leading to division by zero)"
+        print("Warning. Undefined (TN + FN is 0, leading to division by zero)")
+        return None
     npv = tn / (tn + fn)
     return npv
 
@@ -222,20 +226,20 @@ def custom_classification_report(
     """Generates a custom classification report with various metrics.
 
     Args:
-            y_true (np.ndarray): True labels.
-            y_pred (np.ndarray): Predicted labels.
-            y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
-            output_dir (str): Directory to save the output files.
-            output_filename (str, optional): Filename for the output files. Defaults to None.
-            best_params (dict, optional): Best model parameters. Defaults to None.
-            feature_vector (list, optional): Feature vector. Defaults to None.
-            model_name (str, optional): Name of the model. Defaults to None.
-            classes (list, optional): List of class names. Defaults to [0, 1].
-            amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
-            save (bool, optional): Whether to save the output files. Defaults to True.
+                    y_true (np.ndarray): True labels.
+                    y_pred (np.ndarray): Predicted labels.
+                    y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+                    output_dir (str): Directory to save the output files.
+                    output_filename (str, optional): Filename for the output files. Defaults to None.
+                    best_params (dict, optional): Best model parameters. Defaults to None.
+                    feature_vector (list, optional): Feature vector. Defaults to None.
+                    model_name (str, optional): Name of the model. Defaults to None.
+                    classes (list, optional): List of class names. Defaults to [0, 1].
+                    amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
+                    save (bool, optional): Whether to save the output files. Defaults to True.
 
     Returns:
-            tuple[pd.DataFrame, pd.DataFrame]: Custom classification report and sklearn classification report.
+                    tuple[pd.DataFrame, pd.DataFrame]: Custom classification report and sklearn classification report.
     """
     if len(np.unique(y_true)) == 1:
         sensitivity = metrics.recall_score(y_true, y_pred)
@@ -306,7 +310,7 @@ def custom_classification_report(
         # Custom classification report
         custom_cr_all_classes = []
         for i in list(range(len(classes))) + ["macro", "weighted"]:
-            support_both_classes = dict(Counter(y_true))
+            # support_both_classes = dict(Counter(y_true))
             if i == 0:
                 pos_label = 0
                 specificity_label = 1
@@ -405,18 +409,15 @@ def custom_classification_report(
     return custom_cr, sklearn_cr
 
 
-from sklearn.metrics import roc_curve
-
-
 def find_optimal_threshold(y_true: np.ndarray, y_proba_1: np.ndarray) -> float:
     """Finds the optimal threshold for binary classification based on Youden's Index.
 
     Args:
-            y_true (np.ndarray): True binary labels.
-            y_proba_1 (np.ndarray): Target scores, probabilities of the positive class.
+                    y_true (np.ndarray): True binary labels.
+                    y_proba_1 (np.ndarray): Target scores, probabilities of the positive class.
 
     Returns:
-            float: Optimal threshold value.
+                    float: Optimal threshold value.
     """
     # Compute ROC curve
     fpr, tpr, thresholds = roc_curve(y_true, y_proba_1)
@@ -448,21 +449,21 @@ def save_classification_performance(
     """Saves classification performance results and generates reports.
 
     Args:
-            y_test (np.ndarray): Test labels.
-            y_pred (np.ndarray): Predicted labels.
-            y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
-            output_dir_i (str): Directory to save the output files.
-            output_filename (str, optional): Filename for the output files. Defaults to None.
-            feature_vector (list, optional): Feature vector. Defaults to None.
-            model_name (str, optional): Name of the model. Defaults to None.
-            best_params (dict, optional): Best model parameters. Defaults to None.
-            classes (list, optional): List of class names. Defaults to [0, 1].
-            amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
-            save_confusion_matrix (bool, optional): Whether to save the confusion matrix. Defaults to True.
-            save_output (bool, optional): Whether to save the output files. Defaults to True.
+                    y_test (np.ndarray): Test labels.
+                    y_pred (np.ndarray): Predicted labels.
+                    y_proba_1 (np.ndarray): Predicted probabilities for the positive class.
+                    output_dir_i (str): Directory to save the output files.
+                    output_filename (str, optional): Filename for the output files. Defaults to None.
+                    feature_vector (list, optional): Feature vector. Defaults to None.
+                    model_name (str, optional): Name of the model. Defaults to None.
+                    best_params (dict, optional): Best model parameters. Defaults to None.
+                    classes (list, optional): List of class names. Defaults to [0, 1].
+                    amount_of_clauses (str, optional): Number of clauses. Defaults to 'all'.
+                    save_confusion_matrix (bool, optional): Whether to save the confusion matrix. Defaults to True.
+                    save_output (bool, optional): Whether to save the output files. Defaults to True.
 
     Returns:
-            tuple: Custom classification report, sklearn classification report, confusion matrixes, and predictions.
+                    tuple: Custom classification report, sklearn classification report, confusion matrixes, and predictions.
     """
     if output_filename is None:
         output_filename = f"{feature_vector}_{model_name}_{classes[1]}.csv"
@@ -520,23 +521,23 @@ def regression_report(
     """Generates a regression report including various metrics and plots.
 
     Args:
-            y_test (np.ndarray): Test labels.
-            y_pred (np.ndarray): Predicted labels.
-            y_train (np.ndarray, optional): Training labels. Defaults to None.
-            gridsearch (dict, optional): Grid search results. Defaults to None.
-            best_params (dict, optional): Best model parameters. Defaults to None.
-            feature_vector (list, optional): Feature vector. Defaults to None.
-            model_name (str, optional): Name of the model. Defaults to None.
-            metrics_to_report (str, list, optional): Metrics to report. Defaults to "all". options: {'all', ['MAE','RMSE','rho', 'Best parameters']}
-            plot (bool, optional): Whether to generate plots. Defaults to True.
-            save_fig_path (str, optional): Path to save the figure. Defaults to None.
-            n (str, optional): Sample size. Defaults to "all".
-            round_to (int, optional): Decimal places for rounding. Defaults to 2.
-            figsize (tuple, optional): Figure size. Defaults to (4, 8).
-            ordinal_ticks (bool, optional): Whether to use ordinal ticks. Defaults to True.
+                    y_test (np.ndarray): Test labels.
+                    y_pred (np.ndarray): Predicted labels.
+                    y_train (np.ndarray, optional): Training labels. Defaults to None.
+                    gridsearch (dict, optional): Grid search results. Defaults to None.
+                    best_params (dict, optional): Best model parameters. Defaults to None.
+                    feature_vector (list, optional): Feature vector. Defaults to None.
+                    model_name (str, optional): Name of the model. Defaults to None.
+                    metrics_to_report (str, list, optional): Metrics to report. Defaults to "all". options: {'all', ['MAE','RMSE','rho', 'Best parameters']}
+                    plot (bool, optional): Whether to generate plots. Defaults to True.
+                    save_fig_path (str, optional): Path to save the figure. Defaults to None.
+                    n (str, optional): Sample size. Defaults to "all".
+                    round_to (int, optional): Decimal places for rounding. Defaults to 2.
+                    figsize (tuple, optional): Figure size. Defaults to (4, 8).
+                    ordinal_ticks (bool, optional): Whether to use ordinal ticks. Defaults to True.
 
     Returns:
-            pd.DataFrame: DataFrame with regression metrics.
+                    pd.DataFrame: DataFrame with regression metrics.
     """
 
     # Metrics
