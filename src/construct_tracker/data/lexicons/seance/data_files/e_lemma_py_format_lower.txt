@@ -1,4 +1,4 @@
-# e_lemma.txt (ver.2 for wordsmith 4)
+# e_lemma.txt (ver.2 for wordsmith 4) 
 
 
 # compiled by yasumasa someya, september 1, 1998.
@@ -7,13 +7,13 @@
 # this lemma list is provided "as is" and is free to use for any research
 
 
-# and/or educational purposes.
+# and/or educational purposes. 
 
 
-# the list currently contains 40,569 words (tokens) in 14,762 lemma groups.
+# the list currently contains 40,569 words (tokens) in 14,762 lemma groups. 
 
 
-# it is still far from complete, but i hope you find the list useful in
+# it is still far from complete, but i hope you find the list useful in 
 
 
 # preparing your own more complete lemma list. if you have any questions or
@@ -31,7 +31,7 @@
 #   'nt -> 't,nt,t
 
 
-#   have -> has,having,had,'d,'ve,d,ve
+#   have -> has,having,had,'d,'ve,d,ve 
 
 
 #   be -> am,are,is,was,were,being,been,'m,m
@@ -44351,3 +44351,5 @@ zoom zooms zooming zoomed
 
 
 zulu zulus
+
+

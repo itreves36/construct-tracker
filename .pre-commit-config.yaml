@@ -60,7 +60,10 @@ repos:
     args: [--maxkb=15000]      # Prevent large files from being added to the repo
   - id: check-case-conflict      # Detect case conflicts in file names
   - id: end-of-file-fixer      # Ensure files end with a newline
+    exclude: \.(csv|txt|json|docx)$
+
   - id: trailing-whitespace      # Remove trailing whitespace
+    exclude: \.(csv|txt|json|docx)$
   - id: pretty-format-json
     args:
     - --autofix
