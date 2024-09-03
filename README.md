@@ -1,4 +1,4 @@
-<!-- [![Build](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml?query=branch%3Amain) -->
+[![Build](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/danielmlow/construct-tracker/actions/workflows/test.yaml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/danielmlow/construct-tracker/graph/badge.svg?token=9S8WY128PO)](https://codecov.io/gh/danielmlow/construct-tracker)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
