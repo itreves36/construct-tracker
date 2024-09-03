@@ -12,11 +12,19 @@ keywords = ["lexicon", "concept", "classification", "NLP", "embeddings", "simila
 packages = [
   {include = "construct_tracker", from = "src"}
 ]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent"
+]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = "~=3.9"
 IPython = ">=7.0,<10.0"
-torch = "^1.6.0"
+torch = ">=1.6.0,<2.0.0"
 black = ">=22.0.0,<23.0.0"
 isort = ">=5.0.0,<6.0.0"
 mkdocs = ">=1.0.0,<2.0.0"
@@ -32,7 +40,7 @@ litellm = ">=1.35.28,<2.0.0"
 dill = ">=0.3.0,<0.4.0"
 spacy = "3.6.1"
 deplacy = ">=2.1.0"
-sentence_transformers = "2.2.2"
+sentence_transformers = "~=2.2.2"
 
 [tool.poetry.group.dev]
 optional = true
