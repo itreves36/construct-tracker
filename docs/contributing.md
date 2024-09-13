@@ -8,6 +8,14 @@ Note that a code of conduct applies to all spaces managed by the `construct-trac
 ## Workflow
 Please use the following workflow when contributing:
 
+# Create a virtual environment
+
+conda create --name py310 python=3.10.14
+conda activate py310
+
+
+
+
 0. **Install poetry and versioneer for dynamic versioning**:
   - ```pip install poetry==1.7.1```
   - ```pip install versioneer```
@@ -37,6 +45,8 @@ Please use the following workflow when contributing:
 	  - If you get errors, you might want to clean pre-commit before trying again:
 	  ```
 	    pre-commit clean
+		rm -rf ~/.cache/pre-commit
+		rm -rf /Users/danielmlow/.cache/pre-commit
 		pre-commit uninstall
 		pre-commit install
 		poetry lock
@@ -60,7 +70,7 @@ Please use the following workflow when contributing:
 This approach ensures that tasks, issues, and branches all have names that correspond.
 It also facilitates incremental neatly scoped changes since it tends to keep the scope of individual changes narrow.
 
-## Debugging
+## Debugging what version poetry is using to install
 
 Poetry can have an error where it is using the wrong python version:
 ```
