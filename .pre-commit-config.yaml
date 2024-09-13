@@ -7,7 +7,7 @@ repos:
   rev: 1.8.0
   hooks:
   - id: poetry-check
-    language_version: python3.9
+    language_version: python3.10
 
 # Sort imports
 - repo: https://github.com/pre-commit/mirrors-isort
@@ -21,7 +21,7 @@ repos:
   rev: v0.4.10
   hooks:
   - id: ruff            # Linter to catch stylistic and logical errors
-    language_version: python3.9
+    language_version: python3.10
     exclude: ^src/construct_tracker/data/lexicons/.*$
   - id: ruff-format     # Formatter to automatically format code
     exclude: ^src/construct_tracker/data/lexicons/.*$
@@ -37,51 +37,63 @@ repos:
 #     - types-requests      # Ensure type checking works with requests library
 
   # Formatting YAML and TOML files
+# Formatting YAML and TOML files
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
-    language_version: python3.9
+    language_version: python3.10  # Ensure Python 3.10 is used
     args:
     - --autofix
     - --indent=2
   - id: pretty-format-toml
-    exclude: ^poetry.lock$      # Exclude the Poetry lock file
+    language_version: python3.10  # Ensure Python 3.10 is used
+    exclude: ^poetry.lock$
     args:
     - --autofix
     - --indent=2
-    - --no-sort        # Do not sort entries, keep the original order
+    - --no-sort
 
-  # General pre-commit hooks for file checks
+# General pre-commit hooks for file checks
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.6.0
   hooks:
   - id: check-added-large-files
-    args: [--maxkb=15000]      # Prevent large files from being added to the repo
-  - id: check-case-conflict      # Detect case conflicts in file names
-  - id: end-of-file-fixer      # Ensure files end with a newline
+    args: [--maxkb=15000]
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: check-case-conflict
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: end-of-file-fixer
     exclude: \.(csv|txt|json|docx)$
-
-  - id: trailing-whitespace      # Remove trailing whitespace
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: trailing-whitespace
     exclude: \.(csv|txt|json|docx)$
+    language_version: python3.10  # Ensure Python 3.10 is used
   - id: pretty-format-json
+    language_version: python3.10  # Ensure Python 3.10 is used
     args:
     - --autofix
     - --indent=4
-    - --no-sort-keys        # Maintain the original order of keys
-  - id: check-merge-conflict      # Detect unresolved merge conflicts
-  - id: check-yaml      # Validate YAML file syntax
-  - id: check-json      # Validate JSON file syntax
-  - id: check-toml      # Validate TOML file syntax
-  - id: detect-private-key      # Prevent committing private keys
-  - id: name-tests-test      # Ensure test files follow naming conventions
+    - --no-sort-keys
+  - id: check-merge-conflict
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: check-yaml
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: check-json
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: check-toml
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: detect-private-key
+    language_version: python3.10  # Ensure Python 3.10 is used
+  - id: name-tests-test
+    language_version: python3.10  # Ensure Python 3.10 is used
 
   # Codespell for spell checking
 - repo: https://github.com/codespell-project/codespell
   rev: v2.3.0
   hooks:
   - id: codespell
-    language_version: python3.9
+    language_version: python3.10
     args: ['--skip=*.csv,*.json,*.ipynb,*.txt,*.docx,*doc', --ignore-words-list=fpr]        # Skip spell check for Jupyter Notebooks
     exclude: (^.*stop_words.py$|^.*vaderSentiment.py$)        # Exclude specific files
     additional_dependencies:
@@ -92,7 +104,7 @@ repos:
   rev: v0.0.7
   hooks:
   - id: clean-dotenv      # Ensure .env files are clean and organized
-    language_version: python3.9
+    language_version: python3.10
 
   # Local hook to enforce .yaml extension over .yml
 - repo: local
@@ -103,13 +115,14 @@ repos:
     language: fail
     files: \.yml$
 
-  # Local hook to run pytest with testmon
+# Local hook to run pytest with testmon
 - repo: local
   hooks:
   - id: pytest
+    language: system            # Specify the environment (system uses the Python environment managed by Poetry)
+    # language_version: python3.10 # Ensure it runs in Python 3.10
     name: pytest
-    entry: poetry run pytest
-    language: system
+    entry: poetry run pytest     # Use `poetry run pytest` to run tests
     types: [python]
-    pass_filenames: false      # Do not pass filenames to pytest
-    always_run: true      # Always run this hook
+    pass_filenames: false        # Do not pass filenames to pytest
+    always_run: true             # Always run this hook

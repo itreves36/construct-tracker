@@ -39,9 +39,10 @@ Please use the following workflow when contributing:
 	    pre-commit clean
 		pre-commit uninstall
 		pre-commit install
-		poetry lock [--no-update]
+		poetry lock
 	  ```
 	  - For all hooks:
+
 	  ```pre-commit run --all-files```
 	  - For individual hooks
 		- Static type checks:
@@ -59,7 +60,40 @@ Please use the following workflow when contributing:
 This approach ensures that tasks, issues, and branches all have names that correspond.
 It also facilitates incremental neatly scoped changes since it tends to keep the scope of individual changes narrow.
 
+## Debugging
+
+Poetry can have an error where it is using the wrong python version:
+```
+$ python --version
+Python 3.7.3
+```
+
+To fix:
+
+```
+rm -rf /Users/danielmlow/.cache/pre-commit
+brew install pyenv
+pyenv install 3.10
+pyenv global 3.10
+export PATH="$(pyenv root)/shims:$PATH"
+export PATH="$HOME/.pyenv/bin:$PATH"
+source ~/.bashrc  # or ~/.zshrc if you're using zsh
+python --version
+pyenv version
+poetry env use python3.10.14
+cd /Users/danielmlow/Dropbox\ \(MIT\)/datum/
+rm .python-version
+echo "3.10.14" > .python-version
+
+
+
+```
+
+
 **If you would like to change this workflow, please use the current process to suggest a change to this document.**
+
+
+
 
 ### Add a tutorial
 If you feel that the functionality you have added to construct-tracker requires some extra explanation, or you want to share some of the knowledge you obtained during the process, create a tutorial and add to `./tutorials/`
@@ -136,6 +170,8 @@ poetry lock
 poetry install
 poetry config pypi-token.pypi API_token
 poetry build
+pip install twine
+twine upload dist/*
 poetry publish
 ```
 

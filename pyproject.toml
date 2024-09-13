@@ -14,33 +14,28 @@ packages = [
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
   "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent"
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-IPython = ">=7.0,<10.0"
+python = ">=3.9,<3.12"
 torch = "~=2.2.2"
 black = ">=22.0.0,<23.0.0"
-isort = ">=5.0.0,<6.0.0"
-mkdocs = ">=1.0.0,<2.0.0"
-mkdocs-material = ">=8.0.0,<9.0.0"
-mkdocstrings = ">=0.18.0,<0.19.0"
 pandas = ">=2.0.0,<3.0.0"
-pydantic = "~=2.7"
 scikit-learn = "~=1.5"
-numpy = "~=1.25"
 seaborn = ">=0.12.0,<0.13.0"
 matplotlib = ">=3.0.0,<4.0.0"
-statsmodels = "0.14.2"
+statsmodels = "~=0.14.2"
 tqdm = ">=4.0.0,<5.0.0"
 litellm = ">=1.35.28,<2.0.0"
 dill = ">=0.3.0,<0.4.0"
-spacy = "3.6.1"
+cython = ">=0.29.24"
+thinc = "~8.1.0"
+spacy = "~=3.6.1"
 nltk = "~=3.8"
 deplacy = ">=2.1.0"
 sentence-transformers = "~=2.7"
@@ -49,7 +44,13 @@ sentence-transformers = "~=2.7"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
+srsly = "~2.4.0"
 pdoc = "^14.6.1"
+isort = ">=5.0.0,<6.0.0"
+mkdocs = ">=1.0.0,<2.0.0"
+pydantic = "~=2.7"
+mkdocs-material = ">=8.0.0,<9.0.0"
+mkdocstrings = ">=0.18.0,<0.19.0"
 pytest = "^8.2"
 pytest-mock = "~=3.14"
 mypy = "~=1.9"
