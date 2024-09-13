@@ -5,6 +5,7 @@ suicide_risk_lexicon_cts.ipynb
 lbl2vec.ipynb
 
 
+
 # Data
 data/*
 
@@ -14,6 +15,8 @@ data/*
 !data/*/.gitkeep
 !data/*/datasets_description.md
 !data/*/*/.gitkeep
+!data/datasets/load_datasets.py
+
 
 # Include lexicon_A directory and its contents
 !data/lexicons/suicide_risk_lexicon_v1-0/
