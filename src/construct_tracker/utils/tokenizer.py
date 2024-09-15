@@ -16,7 +16,6 @@ import subprocess
 import sys
 from typing import List, Optional, Union
 
-import deplacy
 import spacy
 import tqdm
 
@@ -26,7 +25,7 @@ def spacy_tokenizer(
     nlp: Optional[spacy.language.Language] = None,
     method: str = "clause",
     lowercase: bool = False,
-    display_tree: bool = False,
+    # display_tree: bool = False,
     remove_punct: bool = True,
     clause_remove_conj: bool = True,
 ) -> Union[List[List[str]], List[str]]:
@@ -75,9 +74,10 @@ def spacy_tokenizer(
     elif method == "clause":
         chunks_for_all_docs = []
         for doc in tqdm.tqdm(nlp.pipe(docs, batch_size=2048), position=0):
-            if display_tree:
-                print(doc)
-                print(deplacy.render(doc))
+            # if display_tree:
+            #     import deplacy
+            #     print(doc)
+            #     print(deplacy.render(doc))
 
             seen = set()
             chunks = []
