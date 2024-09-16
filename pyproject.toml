@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "construct-tracker"
-version = "0.0.0"  # dynamic versioning strategy
+version = "0.0.0.post80.dev0+419381d"  # dynamic versioning strategy
 description = "Track and measure constructs, concepts or categories in text documents."
 authors = ["Daniel M. Low <daniel.m.low@gmail.com>"]
 maintainers = ["Daniel M. Low <daniel.m.low@gmail.com>"]
@@ -23,11 +23,9 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-pandas = ">=2.0.0,<3.0.0"
-scikit-learn = "~=1.5"
 seaborn = ">=0.12.0,<0.13.0"
 statsmodels = "~=0.14.2"
-tqdm = ">=4.0.0,<5.0.0"
+
 litellm = ">=1.35.28,<2.0.0"
 dill = ">=0.3.0,<0.4.0"
 cython = ">=0.29.24"
@@ -35,7 +33,10 @@ spacy = {version = "~=3.7.3", extras = []}
 nltk = "~=3.8"
 "sentence-transformers" = {version = "~=2.7", extras = []}
 # numpy = "<=1.23"  # Adjust this version based on compatibility
-# thinc = "~9.1.1"
+# thinc = "~9.1.1" # installed by spacy
+# pandas = ">=2.0.0,<3.0.0" # sentence-transformers
+# scikit-learn = "~=1.5" #sentence-transformers
+#tqdm = ">=4.0.0,<5.0.0" # installed by sentence-transformers
 #deplacy = ">=2.1.0"
 
 
@@ -148,7 +149,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
 bump = false # false: no automatic version bumps on each commit
 style = "pep440"
