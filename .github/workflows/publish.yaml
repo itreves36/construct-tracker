@@ -45,6 +45,10 @@ jobs:
       run: poetry build
       shell: bash
 
+    # Install the package
+    - name: Install the built package
+      run: pip install dist/construct_tracker-*.whl
+
     # Configure Poetry to use the PyPI token from GitHub secrets
     - name: Configure Poetry PyPI token
       run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
