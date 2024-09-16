@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "construct-tracker"
-version = "1.0.0-beta"
+version = "0.0.0"  # dynamic versioning strategy
 description = "Track and measure constructs, concepts or categories in text documents."
 authors = ["Daniel M. Low <daniel.m.low@gmail.com>"]
 maintainers = ["Daniel M. Low <daniel.m.low@gmail.com>"]
@@ -23,26 +23,27 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-black = ">=22.0.0,<23.0.0"
 pandas = ">=2.0.0,<3.0.0"
 scikit-learn = "~=1.5"
 seaborn = ">=0.12.0,<0.13.0"
-matplotlib = ">=3.0.0,<4.0.0"
 statsmodels = "~=0.14.2"
 tqdm = ">=4.0.0,<5.0.0"
 litellm = ">=1.35.28,<2.0.0"
 dill = ">=0.3.0,<0.4.0"
 cython = ">=0.29.24"
-thinc = "~8.1.0"
-spacy = "~=3.6.1"
+spacy = {version = "~=3.7.3", extras = []}
 nltk = "~=3.8"
-deplacy = ">=2.1.0"
-sentence-transformers = "~=2.7"
+"sentence-transformers" = {version = "~=2.7", extras = []}
+# numpy = "<=1.23"  # Adjust this version based on compatibility
+# thinc = "~9.1.1"
+#deplacy = ">=2.1.0"
+
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
+black = ">=22.0.0,<23.0.0"
 srsly = "~2.4.0"
 pdoc = "^14.6.1"
 isort = ">=5.0.0,<6.0.0"
@@ -58,11 +59,8 @@ mypy = "~=1.9"
 pre-commit = "~=3.7"
 ruff = "~=0.3"
 codespell = "~=2.3"
-jupyter = "~=1.0"
-ipywidgets = "~=8.1"
-
-[tool.poetry.group.docs.dependencies]
-pdoc = "^14.6.1"
+#jupyter = "~=1.0"
+#ipywidgets = "~=8.1"
 
 [tool.isort]
 profile = "black"  # Or another profile if you're using one
@@ -79,6 +77,8 @@ pythonpath = [
 testpaths = [
   "src/tests"
 ]
+
+
 
 [tool.mypy]
 ignore_missing_imports = true
@@ -140,6 +140,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "src/tests/**/*.py" = []
 
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -149,7 +150,7 @@ line-ending = "auto"
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-bump = true
+bump = false # false: no automatic version bumps on each commit
 style = "pep440"
 pattern = "default-unprefixed"
 
@@ -161,14 +162,6 @@ skip = [
 ]
 ignore-words-list = ["construct-tracker", "construct_tracker", "nd", "astroid", "wil", "te"]
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "sr/construct_tracker/_version.py"
-tag_prefix = ""
-parentdir_prefix = "construct-tracker-"
-
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-# build-backend = "poetry.core.masonry.api"
 build-backend = "poetry_dynamic_versioning.backend"

@@ -29,12 +29,25 @@ jobs:
 
     - name: Check Python version
       run: python --version
+    
+    - name: Install PyTorch
+      run: pip install torch==2.4.1+cpu
+  
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}
+          ${{ runner.os }}-pip
 
-    - name: Free up space
-      run: |
-        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
-        sudo rm -rf /usr/share/swift /usr/local/share/boost
-        sudo apt-get clean
+    # Takes too long
+    # - name: Free up space
+    #   run: |
+    #     sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+    #     sudo rm -rf /usr/share/swift /usr/local/share/boost
+    #     sudo apt-get clean
 
     - name: Check disk space before install
       run: df -h
@@ -57,9 +70,11 @@ jobs:
       run: python -c 'import construct_tracker; print("Package imported successfully")'
 
     - name: Run tox
-      run: |
-        python_version=$(echo ${{ matrix.python-version }} | sed 's/\.//g')
-        tox -e py${python_version}
+      run: tox
+    # - name: Run tox
+    #   run: |
+    #     python_version=$(echo ${{ matrix.python-version }} | sed 's/\.//g')
+    #     tox -e py${python_version}
 
     - name: Check disk space after install
       run: df -h
