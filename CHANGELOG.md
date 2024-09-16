@@ -1,3 +1,16 @@
+# v0.0.4 (Mon Sep 16 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Merge branch 'main' of github.com:danielmlow/construct-tracker (danielmlow@MacBook-Pro.local)
+- fixed load_datasets.py (danielmlow@MacBook-Pro.local)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@MacBook-Pro.local)
+
+---
+
 # v0.0.3 (Sun Sep 15 2024)
 
 #### ⚠️ Pushed to `main`
