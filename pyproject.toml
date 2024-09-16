@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "construct-tracker"
-version = "0.0.0.post80.dev0+419381d"  # dynamic versioning strategy
+version = "1.0.0"  # dynamic versioning strategy
 description = "Track and measure constructs, concepts or categories in text documents."
 authors = ["Daniel M. Low <daniel.m.low@gmail.com>"]
 maintainers = ["Daniel M. Low <daniel.m.low@gmail.com>"]
@@ -25,7 +25,6 @@ classifiers = [
 python = ">=3.9,<3.12"
 seaborn = ">=0.12.0,<0.13.0"
 statsmodels = "~=0.14.2"
-
 litellm = ">=1.35.28,<2.0.0"
 dill = ">=0.3.0,<0.4.0"
 cython = ">=0.29.24"
@@ -151,7 +150,7 @@ line-ending = "auto"
 [tool.poetry-dynamic-versioning]
 enable = false
 vcs = "git"
-bump = false # false: no automatic version bumps on each commit
+bump = true # false: no automatic version bumps on each commit
 style = "pep440"
 pattern = "default-unprefixed"
 
