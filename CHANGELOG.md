@@ -1,3 +1,15 @@
+# v0.0.6 (Mon Sep 16 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Updated publish.yaml and resolved pre-commit issues (danielmlow@MacBook-Pro.local)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@MacBook-Pro.local)
+
+---
+
 # v0.0.5 (Mon Sep 16 2024)
 
 #### ⚠️ Pushed to `main`
