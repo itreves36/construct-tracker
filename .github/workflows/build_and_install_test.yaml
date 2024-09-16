@@ -70,7 +70,7 @@ jobs:
     - name: Run tox
       run: |
         python_version=$(echo ${{ matrix.python-version }} | sed 's/\.//g')
-        tox -e py${python_version} --python=python
+        tox -e py${python_version}
 
     # - name: Check disk space after install
     #   run: df -h
