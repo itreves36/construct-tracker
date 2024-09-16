@@ -1,3 +1,16 @@
+# v1.0.2 (Mon Sep 16 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Merge remote-tracking branch 'origin/main' (danielmlow@dhcp-10-250-136-6.harvard.edu)
+- pip install construct-tracker (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+---
+
 # v1.0.1 (Mon Sep 16 2024)
 
 #### 🐛 Bug Fix
