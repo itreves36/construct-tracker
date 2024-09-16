@@ -3,10 +3,10 @@ name: Test build and install upon Python 3.9 to 3.11
 on:
   push:
     branches:
-    - '**'
+      - '**'
   pull_request:
     branches:
-    - '**'
+      - '**'
 
 jobs:
   test:
@@ -33,6 +33,10 @@ jobs:
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=src" >> $GITHUB_ENV
 
+    # Clean the dist/ directory to avoid multiple .whl files
+    - name: Clean dist directory
+      run: rm -rf dist/*
+
     - name: Build package
       run: |
         poetry build
@@ -45,6 +49,7 @@ jobs:
       run: |
         python -c 'import construct_tracker; print("Package imported successfully")'
 
+    # Run tox to test in multiple environments
     - name: Run tox
       run: tox
 
