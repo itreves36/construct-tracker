@@ -1,3 +1,15 @@
+# v0.0.3 (Sun Sep 15 2024)
+
+#### ⚠️ Pushed to `main`
+
+- edited some versions and init path to load_datasets.py (danielmlow@MacBook-Pro.local)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@MacBook-Pro.local)
+
+---
+
 # v0.0.2 (Fri Sep 13 2024)
 
 #### 🐛 Bug Fix
