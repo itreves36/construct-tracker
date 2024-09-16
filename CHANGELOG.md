@@ -1,3 +1,16 @@
+# v0.0.5 (Mon Sep 16 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Merge branch 'main' of github.com:danielmlow/construct-tracker (danielmlow@MacBook-Pro.local)
+- removed load_data from main construct_tracker (danielmlow@MacBook-Pro.local)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@MacBook-Pro.local)
+
+---
+
 # v0.0.4 (Mon Sep 16 2024)
 
 #### ⚠️ Pushed to `main`
