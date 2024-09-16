@@ -15,6 +15,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Configure Git User
+      run: |
+        git config --global user.email "daniel.m.low@gmail.com"
+        git config --global user.name "danielmlow"
+
     - name: Prepare repository
         # Fetch full git history and tags
       run: git fetch --unshallow --tags
