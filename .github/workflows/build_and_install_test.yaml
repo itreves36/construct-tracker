@@ -47,8 +47,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry tox
 
-    # - name: Install PyTorch
-    #   run: pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+    - name: Install PyTorch
+      run: pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
 
     - name: Install project dependencies
       run: |
@@ -70,7 +70,7 @@ jobs:
     - name: Run tox
       run: |
         python_version=$(echo ${{ matrix.python-version }} | sed 's/\.//g')
-        tox -e py${python_version}
+        tox -e py${python_version} --python=python
 
     # - name: Check disk space after install
     #   run: df -h
