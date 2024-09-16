@@ -30,6 +30,19 @@ jobs:
     - name: Install poetry dynamic versioning tool
       run: pipx inject poetry "poetry-dynamic-versioning[plugin]"
       shell: bash
+    - name: Set dynamic version from tag
+      run: |
+        git fetch --tags
+        latest_tag=$(git describe --tags --abbrev=0)
+        echo "Latest tag is: $latest_tag"
+        poetry version $latest_tag
+        shell: bash
+    - name: Commit and push version bump
+      run: |
+        git config user.name "Your Name"
+        git config user.email "you@example.com"
+        git tag $latest_tag
+        git push origin $latest_tag
     - name: Build package
       run: poetry build
       shell: bash
