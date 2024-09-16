@@ -3,22 +3,24 @@ name: Test build and install upon Python 3.9 to 3.11
 on:
   push:
     branches:
-    - '**'
+      - '**'
   pull_request:
     branches:
-    - '**'
+      - '**'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11']
+      max-parallel: 1  # Limit to one job at a time
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -28,45 +30,37 @@ jobs:
     - name: Check Python version
       run: python --version
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-${{ matrix.python-version }}
-          ${{ runner.os }}-pip
+    - name: Free up space
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+        sudo rm -rf /usr/share/swift /usr/local/share/boost
+        sudo apt-get clean
+
+    - name: Check disk space before install
+      run: df -h
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install poetry tox
 
-    - name: Set PYTHONPATH
-      run: echo "PYTHONPATH=src" >> $GITHUB_ENV
-
-    # Clean the dist/ directory to avoid multiple .whl files
     - name: Clean dist directory
       run: rm -rf dist/*
 
     - name: Build package
-      run: |
-        poetry build
+      run: poetry build
 
     - name: Install package
-      run: |
-        pip install dist/*.whl
+      run: pip install dist/*.whl
 
     - name: Verify package installation
-      run: |
-        python -c 'import construct_tracker; print("Package imported successfully")'
+      run: python -c 'import construct_tracker; print("Package imported successfully")'
 
-    - name: Check tox environments
-      run: tox --listenvs
-
-    # Run tox to test in multiple environments
     - name: Run tox
-      run: tox
+      run: tox -e py${{ matrix.python-version | replace('.', '') }}
+
+    - name: Check disk space after install
+      run: df -h
 
 
 #  publish:
