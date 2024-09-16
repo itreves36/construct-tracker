@@ -1,3 +1,16 @@
+# v1.0.3 (Mon Sep 16 2024)
+
+#### ⚠️ Pushed to `main`
+
+- Merge branch 'main' of github.com:danielmlow/construct-tracker (danielmlow@dhcp-10-250-136-6.harvard.edu)
+- automatic tagging (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+---
+
 # v1.0.2 (Mon Sep 16 2024)
 
 #### ⚠️ Pushed to `main`
