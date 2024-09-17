@@ -21,12 +21,9 @@ jobs:
         git config --global user.name "danielmlow"
 
     - name: Prepare repository
-        # Fetch full git history and tags
       run: git fetch --unshallow --tags
 
     - name: Unset header
-        # checkout@v2 adds a header that makes branch protection report errors
-        # because the Github action bot is not a collaborator on the repo
       run: git config --local --unset http.https://github.com/.extraheader
 
     - name: Set up Python
@@ -40,9 +37,17 @@ jobs:
         wget -O- "$auto_download_url" | gunzip > ~/auto
         chmod a+x ~/auto
 
+    - name: Check if tag already exists
+      id: check_tag
+      run: |
+        if git rev-parse "v1.0.7" >/dev/null 2>&1; then
+          echo "Tag v1.0.7 already exists"
+          exit 1
+        fi
+
     - name: Create release
+      if: steps.check_tag.outcome != 'failure'  # Only run if the tag doesn't exist
       run: |
         ~/auto shipit -vv
       env:
         GH_TOKEN: ${{ secrets.GH_Token }}
-        
