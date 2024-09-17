@@ -37,11 +37,10 @@ jobs:
         wget -O- "$auto_download_url" | gunzip > ~/auto
         chmod a+x ~/auto
 
-    - name: Check if tag already exists
-      id: check_tag
+    - name: Check if tag exists
       run: |
-        if git rev-parse "v1.0.7" >/dev/null 2>&1; then
-          echo "Tag v1.0.7 already exists"
+        if git rev-parse "v${{ github.event.release.tag_name }}" >/dev/null 2>&1; then
+          echo "Tag ${{ github.event.release.tag_name }} already exists."
           exit 1
         fi
 
