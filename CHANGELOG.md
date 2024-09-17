@@ -1,3 +1,17 @@
+# v1.0.10 (Tue Sep 17 2024)
+
+#### ⚠️ Pushed to `main`
+
+- fix tag conflict (danielmlow@dhcp-10-250-136-6.harvard.edu)
+- avoid tag conflict (danielmlow@dhcp-10-250-136-6.harvard.edu)
+- lexicon.py bugs and pyproject.toml (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+#### Authors: 1
+
+- Daniel M. Low (danielmlow@dhcp-10-250-136-6.harvard.edu)
+
+---
+
 # v1.0.8 (Tue Sep 17 2024)
 
 #### ⚠️ Pushed to `main`
