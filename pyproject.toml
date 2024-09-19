@@ -32,12 +32,12 @@ spacy = {version = "~=3.7.3", extras = []}
 nltk = "~=3.8"
 "sentence-transformers" = {version = "~=2.7", extras = []}
 numpy = ">=1.19,<1.26.5"  # Restrict numpy to versions less than or equal to 1.26.4
-# thinc = "~9.1.1" # installed by spacy
-# pandas = ">=2.0.0,<3.0.0" # sentence-transformers
-# scikit-learn = "~=1.5" #sentence-transformers
-#tqdm = ">=4.0.0,<5.0.0" # installed by sentence-transformers
-#deplacy = ">=2.1.0"
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+pdoc = "~=14.4"
 
 [tool.poetry.group.dev]
 optional = true
@@ -59,8 +59,6 @@ mypy = "~=1.9"
 pre-commit = "~=3.7"
 ruff = "~=0.3"
 codespell = "~=2.3"
-#jupyter = "~=1.0"
-#ipywidgets = "~=8.1"
 
 [tool.isort]
 profile = "black"  # Or another profile if you're using one
