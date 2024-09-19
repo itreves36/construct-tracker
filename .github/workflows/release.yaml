@@ -6,8 +6,8 @@ on:
     - main
 
 env:
-  AUTO_VERSION: v10.33.0  # Set to a valid version or leave it blank to fetch the latest release
-  
+  AUTO_VERSION: v11.1.2
+
 jobs:
   auto-release:
     runs-on: ubuntu-latest
@@ -20,9 +20,8 @@ jobs:
         git config --global user.email "daniel.m.low@gmail.com"
         git config --global user.name "danielmlow"
 
-    - name: Prepare repository (fetch all tags)
-      run: |
-        git fetch --prune --unshallow --tags
+    - name: Prepare repository
+      run: git fetch --unshallow --tags
 
     - name: Unset header
       run: git config --local --unset http.https://github.com/.extraheader
@@ -34,69 +33,20 @@ jobs:
 
     - name: Download auto
       run: |
-        # Fetch the latest release version if AUTO_VERSION is not specified
-        if [ -z "$AUTO_VERSION" ]; then
-          auto_version=$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/latest | jq -r .tag_name)
-        else
-          auto_version="$AUTO_VERSION"
-        fi
+        auto_download_url="$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/tags/$AUTO_VERSION | jq -r '.assets[] | select(.name == "auto-linux.gz") | .browser_download_url')"
+        wget -O- "$auto_download_url" | gunzip > ~/auto
+        chmod a+x ~/auto
 
-        # Get the download URL for auto
-        auto_download_url="$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/tags/$auto_version | jq -r '.assets[] | select(.name == "auto-linux.gz") | .browser_download_url')"
-        
-        # Check if download URL is valid
-        if [ -z "$auto_download_url" ]; then
-          echo "Failed to get auto download URL for version $auto_version"
+    - name: Check if tag exists
+      run: |
+        if git rev-parse "v${{ github.event.release.tag_name }}" >/dev/null 2>&1; then
+          echo "Tag ${{ github.event.release.tag_name }} already exists."
           exit 1
         fi
 
-        # Download and extract auto
-        wget -O- "$auto_download_url" | gunzip > ~/auto || exit 1
-        chmod a+x ~/auto
-
-    - name: Check if tag exists locally
-      id: check_local_tag
-      run: |
-        if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
-          echo "Local tag v${{ env.AUTO_VERSION }} exists."
-          echo "tag_exists=true" >> $GITHUB_ENV
-        else
-          echo "tag_exists=false" >> $GITHUB_ENV
-        fi
-
-    - name: Check if tag exists remotely
-      id: check_remote_tag
-      run: |
-        if git ls-remote --tags origin | grep "refs/tags/v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
-          echo "Remote tag v${{ env.AUTO_VERSION }} exists."
-          echo "remote_tag_exists=true" >> $GITHUB_ENV
-        else
-          echo "remote_tag_exists=false" >> $GITHUB_ENV
-        fi
-
-    - name: Remove local tag if it exists
-      if: env.tag_exists == 'true'
-      run: |
-        git tag -d "v${{ env.AUTO_VERSION }}"
-        echo "Removed local tag v${{ env.AUTO_VERSION }}."
-
-    - name: Fetch latest changes and tags
-      run: |
-        git fetch --tags
-
-    - name: Check remote tag status before creating a new release
-      if: env.remote_tag_exists == 'false'
-      run: |
-        echo "No tag exists remotely. Proceeding with the release process."
-
-    - name: Create release (run only if tag doesn't exist remotely)
-      if: env.remote_tag_exists == 'false'
+    - name: Create release
+      if: steps.check_tag.outcome != 'failure'  # Only run if the tag doesn't exist
       run: |
         ~/auto shipit -vv
       env:
         GH_TOKEN: ${{ secrets.GH_Token }}
-
-    - name: Exit release if tag exists remotely
-      if: env.remote_tag_exists == 'true'
-      run: |
-        echo "Tag v${{ env.AUTO_VERSION }} already exists on remote. Skipping release."
