@@ -3,50 +3,53 @@ name: Auto-release
 on:
   push:
     branches:
-    - main
-
-env:
-  AUTO_VERSION: v11.1.2
+      - main
 
 jobs:
   auto-release:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Configure Git User
-      run: |
-        git config --global user.email "daniel.m.low@gmail.com"
-        git config --global user.name "danielmlow"
+      - name: Configure Git User
+        run: |
+          git config --global user.email "daniel.m.low@gmail.com"
+          git config --global user.name "danielmlow"
 
-    - name: Prepare repository
-      run: git fetch --unshallow --tags
+      - name: Prepare repository
+        run: |
+          git fetch --prune --unshallow --tags
 
-    - name: Unset header
-      run: git config --local --unset http.https://github.com/.extraheader
+      - name: Unset header
+        run: git config --local --unset http.https://github.com/.extraheader
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Download auto
-      run: |
-        auto_download_url="$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/tags/$AUTO_VERSION | jq -r '.assets[] | select(.name == "auto-linux.gz") | .browser_download_url')"
-        wget -O- "$auto_download_url" | gunzip > ~/auto
-        chmod a+x ~/auto
+      - name: Install auto
+        run: npm install -g auto
 
-    - name: Check if tag exists
-      run: |
-        if git rev-parse "v${{ github.event.release.tag_name }}" >/dev/null 2>&1; then
-          echo "Tag ${{ github.event.release.tag_name }} already exists."
-          exit 1
-        fi
+      - name: Determine Next Version
+        id: get_version
+        run: |
+          VERSION=$(npx auto version)
+          echo "Next version is $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ secrets.GH_Token }}
 
-    - name: Create release
-      if: steps.check_tag.outcome != 'failure'  # Only run if the tag doesn't exist
-      run: |
-        ~/auto shipit -vv
-      env:
-        GH_TOKEN: ${{ secrets.GH_Token }}
+      - name: Check if tag exists
+        run: |
+          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "Tag v${{ env.VERSION }} already exists."
+            exit 0
+          fi
+
+      - name: Create release
+        run: |
+          npx auto shipit -vv
+        env:
+          GH_TOKEN: ${{ secrets.GH_Token }}
