@@ -6,7 +6,7 @@ on:
     - main
 
 env:
-  AUTO_VERSION: v11.1.2
+  AUTO_VERSION: v1.1.2
 
 jobs:
   auto-release:
@@ -20,8 +20,9 @@ jobs:
         git config --global user.email "daniel.m.low@gmail.com"
         git config --global user.name "danielmlow"
 
-    - name: Prepare repository
-      run: git fetch --prune --unshallow --tags
+    - name: Prepare repository (fetch all tags)
+      run: |
+        git fetch --prune --unshallow --tags
 
     - name: Unset header
       run: git config --local --unset http.https://github.com/.extraheader
@@ -37,22 +38,49 @@ jobs:
         wget -O- "$auto_download_url" | gunzip > ~/auto
         chmod a+x ~/auto
 
-    - name: Check if tag exists
+    - name: Check if tag exists locally
+      id: check_local_tag
       run: |
         if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
-          echo "Tag v${{ env.AUTO_VERSION }} already exists."
-          exit 1
+          echo "Local tag v${{ env.AUTO_VERSION }} exists."
+          echo "tag_exists=true" >> $GITHUB_ENV
+        else
+          echo "tag_exists=false" >> $GITHUB_ENV
+        fi
+
+    - name: Check if tag exists remotely
+      id: check_remote_tag
+      run: |
+        if git ls-remote --tags origin | grep "refs/tags/v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
+          echo "Remote tag v${{ env.AUTO_VERSION }} exists."
+          echo "remote_tag_exists=true" >> $GITHUB_ENV
+        else
+          echo "remote_tag_exists=false" >> $GITHUB_ENV
         fi
 
     - name: Remove local tag if it exists
+      if: env.tag_exists == 'true'
       run: |
-        if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
-          git tag -d "v${{ env.AUTO_VERSION }}"
-        fi
+        git tag -d "v${{ env.AUTO_VERSION }}"
+        echo "Removed local tag v${{ env.AUTO_VERSION }}."
 
-    - name: Create release
-      if: success() && steps.check_tag.outcome != 'failure'
+    - name: Fetch latest changes and tags
+      run: |
+        git fetch --tags
+
+    - name: Check remote tag status before creating a new release
+      if: env.remote_tag_exists == 'false'
+      run: |
+        echo "No tag exists remotely. Proceeding with the release process."
+
+    - name: Create release (run only if tag doesn't exist remotely)
+      if: env.remote_tag_exists == 'false'
       run: |
         ~/auto shipit -vv
       env:
         GH_TOKEN: ${{ secrets.GH_Token }}
+
+    - name: Exit release if tag exists remotely
+      if: env.remote_tag_exists == 'true'
+      run: |
+        echo "Tag v${{ env.AUTO_VERSION }} already exists on remote. Skipping release."
