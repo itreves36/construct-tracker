@@ -39,13 +39,13 @@ jobs:
 
     - name: Check if tag exists
       run: |
-        if git rev-parse "v${{ github.event.release.tag_name }}" >/dev/null 2>&1; then
-          echo "Tag ${{ github.event.release.tag_name }} already exists."
+        if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
+          echo "Tag ${{ env.AUTO_VERSION }} already exists."
           exit 1
         fi
 
     - name: Create release
-      if: steps.check_tag.outcome != 'failure'  # Only run if the tag doesn't exist
+      if: success() && steps.check_tag.outcome != 'failure'
       run: |
         ~/auto shipit -vv
       env:

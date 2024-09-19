@@ -103,6 +103,15 @@ conda activate py310
 			```poetry run ruff check --fix```
 		- Spell checking:
 			```pre-commit run codespell --all-files```
+    - add commit
+      ```
+      git add .
+      git commit -m 'message'
+      git fetch --tags
+      git rebase origin/main
+      git push
+      ``` 
+
 9. **Add repository secrets**: From your github web interface, add the following repository secrets: ```CODECOV_TOKEN``` (CodeCov), ```HF_TOKEN``` (HuggingFace), ```PYPI_TOKEN``` (Pypi).
 10. **Submit a pull request**: Once you are done adding your new amazing functionality, submit a pull request to merge the upstream issue branch into the upstream main.
 
