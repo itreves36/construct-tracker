@@ -6,8 +6,8 @@ on:
     - main
 
 env:
-  AUTO_VERSION: v1.1.2
-
+  AUTO_VERSION: v10.33.0  # Set to a valid version or leave it blank to fetch the latest release
+  
 jobs:
   auto-release:
     runs-on: ubuntu-latest
@@ -34,9 +34,13 @@ jobs:
 
     - name: Download auto
       run: |
-        # Fetch the latest release tag or use a specific version
-        auto_version="${AUTO_VERSION:-v10.33.0}"
-        
+        # Fetch the latest release version if AUTO_VERSION is not specified
+        if [ -z "$AUTO_VERSION" ]; then
+          auto_version=$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/latest | jq -r .tag_name)
+        else
+          auto_version="$AUTO_VERSION"
+        fi
+
         # Get the download URL for auto
         auto_download_url="$(curl -fsSL https://api.github.com/repos/intuit/auto/releases/tags/$auto_version | jq -r '.assets[] | select(.name == "auto-linux.gz") | .browser_download_url')"
         
