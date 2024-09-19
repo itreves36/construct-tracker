@@ -21,7 +21,7 @@ jobs:
         git config --global user.name "danielmlow"
 
     - name: Prepare repository
-      run: git fetch --unshallow --tags
+      run: git fetch --prune --unshallow --tags
 
     - name: Unset header
       run: git config --local --unset http.https://github.com/.extraheader
@@ -40,8 +40,14 @@ jobs:
     - name: Check if tag exists
       run: |
         if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
-          echo "Tag ${{ env.AUTO_VERSION }} already exists."
+          echo "Tag v${{ env.AUTO_VERSION }} already exists."
           exit 1
+        fi
+
+    - name: Remove local tag if it exists
+      run: |
+        if git rev-parse "v${{ env.AUTO_VERSION }}" >/dev/null 2>&1; then
+          git tag -d "v${{ env.AUTO_VERSION }}"
         fi
 
     - name: Create release
