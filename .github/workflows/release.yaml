@@ -23,7 +23,7 @@ jobs:
           git config --global user.name "danielmlow"
 
       - name: Auto Release
-        uses: intuit/auto@v1
+        uses: intuit/auto/gh-action@v2
         with:
           github-token: ${{ secrets.GH_Token }}
           plugins: |
