@@ -23,10 +23,10 @@ jobs:
           git config --global user.name "danielmlow"
 
       - name: Auto Release
-        uses: intuit/auto@v10
+        uses: intuit/auto@v2
         with:
           github-token: ${{ secrets.GH_Token }}
           plugins: |
             python
         env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}  # If you're publishing to PyPI
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}  # Include this if you're publishing to PyPI
