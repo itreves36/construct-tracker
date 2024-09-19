@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    [
+      "python",
+      {
+        "setups": ["setup.py", "pyproject.toml"],
+        "beforePublish": "python setup.py sdist bdist_wheel",
+        "publishCommand": "twine upload dist/* -u __token__ -p $PYPI_TOKEN"
+      }
+    ]
+  ]
+}
