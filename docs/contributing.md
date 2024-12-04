@@ -109,7 +109,10 @@ conda activate py310
       git commit -m 'message'
       git fetch --tags
       git rebase origin/main
-      git push
+      
+      git checkout main
+      git pull origin main
+      git push origin main --tags
       ``` 
 
 9. **Add repository secrets**: From your github web interface, add the following repository secrets: ```CODECOV_TOKEN``` (CodeCov), ```HF_TOKEN``` (HuggingFace), ```PYPI_TOKEN``` (Pypi).
