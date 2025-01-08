@@ -76,13 +76,19 @@ def process_document(
     for construct in constructs:
         construct_embeddings = construct_embeddings_all.get(construct)  # embeddings for a construct
 
-        # cosine similarity
+
+
+    
         if construct_representation.startswith("word_"):
             assert len(construct_embeddings.shape) == 1
             if doc_token_embeddings_i.shape[0] == 0:  # happens when there is an empty str
                 doc_token_embeddings_i = [np.zeros(construct_embeddings.shape[0])]
+            if isinstance(construct_embeddings, torch.Tensor):
+                construct_embeddings = construct_embeddings.cpu()
             cosine_scores_docs_i = cosine_similarity([construct_embeddings], doc_token_embeddings_i)
         else:
+            if isinstance(construct_embeddings, torch.Tensor):
+                construct_embeddings = construct_embeddings.cpu()
             # cosine similarity between embedding of construct and document
             cosine_scores_docs_i = cosine_similarity(construct_embeddings, doc_token_embeddings_i)
 
@@ -257,6 +263,7 @@ def measure(
     if tokens_to_encode != []:
         logger.info(f"Encoding {len(tokens_to_encode)} new construct tokens...")
         embeddings = sentence_embedding_model.encode(tokens_to_encode, convert_to_tensor=True, show_progress_bar=True)
+        embeddings = [tensor.cpu() if isinstance(tensor, torch.Tensor) else tensor for tensor in embeddings]  # Move to CPU
 
         
         embeddings_d = dict(zip(tokens_to_encode, embeddings))
@@ -350,7 +357,7 @@ def measure(
         current_index += len(list_of_clauses)
         # for i, list_of_clauses in tqdm.tqdm(enumerate(docs_tokenized), position=0 ):
         # 	docs_embeddings_d[i] = sentence_embedding_model.encode(list_of_clauses, convert_to_tensor=True)
-
+        
         if save_doc_embeddings and save_partial_doc_embeddings and i % 500 == 0:
             # save partial ones in case it fails during the process
             i_str = str(i).zfill(5)
