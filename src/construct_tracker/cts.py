@@ -299,7 +299,6 @@ def measure(
             documents,
             method=document_representation,
             lowercase=False,
-            display_tree=False,
             remove_punct=False,
             clause_remove_conj=True,
         )
