@@ -3,7 +3,7 @@
 Author: Daniel Low
 License: Apache 2.0.
 """
-
+import torch
 import concurrent.futures
 import datetime
 import gzip
