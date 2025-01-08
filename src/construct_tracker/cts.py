@@ -61,6 +61,8 @@ def process_document(
                     - cosine_scores_docs_all (Dict[str, np.ndarray]): The cosine scores for each construct (columns are document tokens, rows are lexicon tokens).
     """
     doc_token_embeddings_i = docs_embeddings_d.get(doc_id)  # embeddings for a document
+    if isinstance(doc_token_embeddings_i[0], torch.Tensor):
+        doc_token_embeddings_i = [tensor.cpu() for tensor in doc_token_embeddings_i]
     doc_token_embeddings_i = np.array(doc_token_embeddings_i, dtype=float)
 
     if skip_nan and doc_token_embeddings_i is None:
@@ -255,6 +257,8 @@ def measure(
     if tokens_to_encode != []:
         logger.info(f"Encoding {len(tokens_to_encode)} new construct tokens...")
         embeddings = sentence_embedding_model.encode(tokens_to_encode, convert_to_tensor=True, show_progress_bar=True)
+
+        
         embeddings_d = dict(zip(tokens_to_encode, embeddings))
         stored_embeddings.update(embeddings_d)
 
@@ -335,6 +339,7 @@ def measure(
     for i in tqdm.tqdm(range(0, len(flattened_docs), doc_encoding_batch_size)):
         batch = flattened_docs[i : i + doc_encoding_batch_size]
         encoded_batch = sentence_embedding_model.encode(batch, convert_to_tensor=True)
+        encoded_batch = [tensor.cpu() for tensor in encoded_batch]  # Move to CPU before storing
         encoded_batches.extend(encoded_batch)
 
     # Store embeddings in the dictionary
